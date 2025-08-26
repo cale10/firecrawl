@@ -229,12 +229,7 @@ export const pdfParserWithOptions = z.object({
 export const parsersSchema = z
   .union([
     z.array(z.enum(["pdf"])),
-    z.array(
-      z.union([
-        z.literal("pdf"),
-        pdfParserWithOptions,
-      ])
-    ),
+    z.array(pdfParserWithOptions),
   ])
   .default(["pdf"]);
 
