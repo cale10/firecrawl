@@ -19,6 +19,7 @@ import type { Response } from "undici";
 import { getPageCount } from "../../../../lib/pdf-parser";
 import { getPdfResultFromCache, savePdfResultToCache } from "../../../../lib/gcs-pdf-cache";
 import { AbortManagerThrownError } from "../../lib/abortManager";
+import { shouldParsePDF, getPDFMaxPages } from "../../../../controllers/v2/types";
 
 type PDFProcessorResult = { html: string; markdown?: string };
 
@@ -29,6 +30,7 @@ async function scrapePDFWithRunPodMU(
   meta: Meta,
   tempFilePath: string,
   base64Content: string,
+  maxPages?: number,
 ): Promise<PDFProcessorResult> {
   meta.logger.debug("Processing PDF document with RunPod MU", {
     tempFilePath,
@@ -66,6 +68,7 @@ async function scrapePDFWithRunPodMU(
         filename: path.basename(tempFilePath) + ".pdf",
         timeout: meta.abort.scrapeTimeout(),
         created_at: Date.now(),
+        ...(maxPages !== undefined && { max_pages: maxPages }),
       },
     },
     logger: meta.logger.child({
@@ -147,11 +150,21 @@ async function scrapePDFWithRunPodMU(
 async function scrapePDFWithParsePDF(
   meta: Meta,
   tempFilePath: string,
+  maxPages?: number,
 ): Promise<PDFProcessorResult> {
   meta.logger.debug("Processing PDF document with parse-pdf", { tempFilePath });
 
   const result = await PdfParse(await readFile(tempFilePath));
-  const escaped = escapeHtml(result.text);
+  let text = result.text;
+  
+  if (maxPages !== undefined && result.numpages > maxPages) {
+    const lines = text.split('\n');
+    const estimatedLinesPerPage = Math.ceil(lines.length / result.numpages);
+    const maxLines = maxPages * estimatedLinesPerPage;
+    text = lines.slice(0, maxLines).join('\n');
+  }
+  
+  const escaped = escapeHtml(text);
 
   return {
     markdown: escaped,
@@ -162,9 +175,10 @@ async function scrapePDFWithParsePDF(
 export async function scrapePDF(
   meta: Meta,
 ): Promise<EngineScrapeResult> {
-  const shouldParsePDF = meta.options.parsers?.includes("pdf") ?? true;
+  const shouldParse = shouldParsePDF(meta.options.parsers);
+  const maxPages = getPDFMaxPages(meta.options.parsers);
   
-  if (!shouldParsePDF) {
+  if (!shouldParse) {
     if (meta.pdfPrefetch !== undefined && meta.pdfPrefetch !== null) {
       const content = (await readFile(meta.pdfPrefetch.filePath)).toString(
         "base64",
@@ -228,10 +242,12 @@ export async function scrapePDF(
   }
 
   const pageCount = await getPageCount(tempFilePath);
-  if (pageCount * MILLISECONDS_PER_PAGE > (meta.abort.scrapeTimeout() ?? Infinity)) {
+  const effectivePageCount = maxPages ? Math.min(pageCount, maxPages) : pageCount;
+  
+  if (effectivePageCount * MILLISECONDS_PER_PAGE > (meta.abort.scrapeTimeout() ?? Infinity)) {
     throw new PDFInsufficientTimeError(
-      pageCount,
-      pageCount * MILLISECONDS_PER_PAGE + 5000,
+      effectivePageCount,
+      effectivePageCount * MILLISECONDS_PER_PAGE + 5000,
     );
   }
 
@@ -255,6 +271,7 @@ export async function scrapePDF(
         },
         tempFilePath,
         base64Content,
+        maxPages,
       );
     } catch (error) {
       if (
@@ -281,6 +298,7 @@ export async function scrapePDF(
         }),
       },
       tempFilePath,
+      maxPages,
     );
   }
 
@@ -291,7 +309,7 @@ export async function scrapePDF(
     statusCode: response.status,
     html: result?.html ?? "",
     markdown: result?.markdown ?? "",
-    numPages: pageCount,
+    numPages: effectivePageCount,
 
     proxyUsed: "basic",
   };
