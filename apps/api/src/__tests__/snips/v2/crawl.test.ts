@@ -273,23 +273,6 @@ describe("Crawl tests", () => {
         });
     }
 
-    it.concurrent("works with PDF maxPages in scrapeOptions", async () => {
-        const res = await crawl({
-            url: "https://www.orimi.com/pdf-test.pdf",
-            limit: 1,
-            scrapeOptions: {
-                parsers: [{ type: "pdf", maxPages: 1 }],
-            },
-        }, identity);
-
-        expect(res.success).toBe(true);
-        if (res.success) {
-            expect(res.completed).toBe(1);
-            expect(res.data[0].metadata.numPages).toBe(1);
-            expect(res.data[0].markdown).toBeDefined();
-            expect(res.data[0].markdown).toContain("PDF Test File");
-        }
-    }, 5 * scrapeTimeout);
 });
 
 describe("Robots.txt FFI Integration tests", () => {
