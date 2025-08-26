@@ -33,4 +33,25 @@ describe("Search tests", () => {
       expect(doc.markdown).toBeDefined();
     }
   }, 125000);
+
+  it.concurrent("works with PDF maxPages in scrapeOptions", async () => {
+    const res = await search({
+      query: "filetype:pdf test",
+      limit: 1,
+      scrapeOptions: {
+        formats: ["markdown"],
+        parsers: [{ type: "pdf", maxPages: 1 }],
+      },
+      timeout: 120000,
+    }, identity);
+
+    expect(res.web).toBeDefined();
+    if (res.web && res.web.length > 0) {
+      const pdfResult = res.web.find(doc => doc.metadata?.numPages !== undefined);
+      if (pdfResult) {
+        expect(pdfResult.metadata?.numPages).toBe(1);
+        expect(pdfResult.markdown).toBeDefined();
+      }
+    }
+  }, 125000);
 });
