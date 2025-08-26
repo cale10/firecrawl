@@ -150,21 +150,11 @@ async function scrapePDFWithRunPodMU(
 async function scrapePDFWithParsePDF(
   meta: Meta,
   tempFilePath: string,
-  maxPages?: number,
 ): Promise<PDFProcessorResult> {
   meta.logger.debug("Processing PDF document with parse-pdf", { tempFilePath });
 
   const result = await PdfParse(await readFile(tempFilePath));
-  let text = result.text;
-  
-  if (maxPages !== undefined && result.numpages > maxPages) {
-    const lines = text.split('\n');
-    const estimatedLinesPerPage = Math.ceil(lines.length / result.numpages);
-    const maxLines = maxPages * estimatedLinesPerPage;
-    text = lines.slice(0, maxLines).join('\n');
-  }
-  
-  const escaped = escapeHtml(text);
+  const escaped = escapeHtml(result.text);
 
   return {
     markdown: escaped,
@@ -298,7 +288,6 @@ export async function scrapePDF(
         }),
       },
       tempFilePath,
-      maxPages,
     );
   }
 
