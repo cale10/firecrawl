@@ -957,15 +957,15 @@ describe("Scrape tests", () => {
 
         expect(response.markdown).toContain("This is a test to confirm Google Slides scraping abilities.");
       }, scrapeTimeout * 5);
+
+      it.concurrent("scrapes Google Drive PDF files as PDFs", async () => {
+        const response = await scrape({
+          url: "https://drive.google.com/file/d/1QrgvXM2F7sgSdrhoBfdp9IMBVhUk-Ueu/view?usp=drive_link",
+        }, identity);
+  
+        expect(response.markdown).toContain("This is a simple PDF file.");
+      }, scrapeTimeout * 5);
     }
-
-    it.concurrent("scrapes Google Drive PDF files as PDFs", async () => {
-      const response = await scrape({
-        url: "https://drive.google.com/file/d/1QrgvXM2F7sgSdrhoBfdp9IMBVhUk-Ueu/view?usp=drive_link",
-      }, identity);
-
-      expect(response.markdown).toContain("This is a simple PDF file.");
-    }, scrapeTimeout * 5);
 
     it.concurrent("scrapes Google Drive text files correctly", async () => {
       const response = await scrape({
