@@ -45,6 +45,17 @@ export function ensureValidScrapeOptions(options?: ScrapeOptions): void {
   if (options.waitFor != null && options.waitFor < 0) {
     throw new Error("waitFor must be non-negative");
   }
+  if (options.parsers) {
+    for (const parser of options.parsers) {
+      if (typeof parser === "object" && parser.type === "pdf") {
+        if (parser.maxPages !== undefined) {
+          if (!Number.isInteger(parser.maxPages) || parser.maxPages < 1 || parser.maxPages > 1000) {
+            throw new Error("maxPages must be an integer between 1 and 1000");
+          }
+        }
+      }
+    }
+  }
   ensureValidFormats(options.formats);
 }
 
