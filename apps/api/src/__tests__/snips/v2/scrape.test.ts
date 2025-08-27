@@ -892,6 +892,15 @@ describe("Scrape tests", () => {
 
       expect(response.markdown).toContain("This is a simple TXT file.");
     }, scrapeTimeout * 5);
+
+    it.concurrent("scrapes Google Sheets links correctly", async () => {
+      const response = await scrape({
+        url: "https://docs.google.com/spreadsheets/d/1DTpw_bbsf3OY17ZqEYEpW6lAmLdCRC2WfLrV0isG9ac/edit?usp=sharing",
+        maxAge: 0,
+      }, identity);
+
+      expect(response.markdown).toContain("This is a test sheet.");
+    }, scrapeTimeout * 5);
   });
 
   if (!process.env.TEST_SUITE_SELF_HOSTED || process.env.OPENAI_API_KEY || process.env.OLLAMA_BASE_URL) {
