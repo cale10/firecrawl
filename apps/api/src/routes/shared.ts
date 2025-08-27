@@ -205,8 +205,6 @@ export function countryCheck(
     return next();
   }
 
-  logger.debug("debug: ip", { ip: req.ip });
-  
   if (!req.ip) {
     logger.warn("IP address not found, unable to check country");
     return next();
