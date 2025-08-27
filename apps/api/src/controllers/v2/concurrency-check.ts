@@ -1,9 +1,9 @@
 import {
-  AuthCreditUsageChunkFromTeam,
   ConcurrencyCheckParams,
   ConcurrencyCheckResponse,
   RequestWithAuth,
 } from "./types";
+import { AuthCreditUsageChunkFromTeam } from "../v1/types";
 import { Response } from "express";
 import { redisEvictConnection } from "../../../src/services/redis";
 import { getACUCTeam } from "../auth";

@@ -1073,6 +1073,7 @@ type Account = {
 
 export type AuthCreditUsageChunk = {
   api_key: string;
+  api_key_id: number;
   team_id: string;
   sub_id: string | null;
   sub_current_period_start: string | null;
