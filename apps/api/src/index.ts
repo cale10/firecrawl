@@ -251,9 +251,13 @@ app.use(
         logger.warn("Unsupported protocol error: " + JSON.stringify(req.body));
       }
 
+      const customErrorMessage = err.errors.length > 0 && err.errors[0].code === "custom" 
+        ? err.errors[0].message 
+        : "Bad Request";
+      
       res
         .status(400)
-        .json({ success: false, code: "BAD_REQUEST", error: "Bad Request", details: err.errors });
+        .json({ success: false, code: "BAD_REQUEST", error: customErrorMessage, details: err.errors });
     } else {
       next(err);
     }
@@ -308,4 +312,4 @@ logger.info(`Worker ${process.pid} started`);
 // sq.on("paused", j => ScrapeEvents.logJobEvent(j, "paused"));
 // sq.on("resumed", j => ScrapeEvents.logJobEvent(j, "resumed"));
 // sq.on("removed", j => ScrapeEvents.logJobEvent(j, "removed"));
-// 
+//  
