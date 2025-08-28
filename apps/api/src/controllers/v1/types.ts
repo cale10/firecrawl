@@ -84,6 +84,27 @@ export const url = z.preprocess(
 const strictMessage =
   "Unrecognized key in body -- please review the v1 API documentation for request body changes";
 
+function validateSchemaForOpenAI(schema: any): boolean {
+  if (!schema || typeof schema !== 'object') return true;
+  
+  function hasAdditionalProperties(obj: any): boolean {
+    if (typeof obj !== 'object' || obj === null) return false;
+    
+    if (obj.hasOwnProperty('additionalProperties')) return true;
+    
+    for (const value of Object.values(obj)) {
+      if (typeof value === 'object' && value !== null) {
+        if (hasAdditionalProperties(value)) return true;
+      }
+    }
+    return false;
+  }
+  
+  return !hasAdditionalProperties(schema);
+}
+
+const OPENAI_SCHEMA_ERROR_MESSAGE = "Schema contains 'additionalProperties' which is not supported by OpenAI. Please remove this property from your schema.";
+
 export const agentExtractModelValue = 'fire-1'
 export const isAgentExtractModelValid = (x: string | undefined) => x?.toLowerCase() === agentExtractModelValue;
 
@@ -113,6 +134,12 @@ export const extractOptions = z
         },
         {
           message: "Invalid JSON schema.",
+        },
+      )
+      .refine(
+        (val) => validateSchemaForOpenAI(val),
+        {
+          message: OPENAI_SCHEMA_ERROR_MESSAGE,
         },
       ),
     systemPrompt: z
@@ -146,6 +173,12 @@ export const extractOptionsWithAgent = z
         },
         {
           message: "Invalid JSON schema.",
+        },
+      )
+      .refine(
+        (val) => validateSchemaForOpenAI(val),
+        {
+          message: OPENAI_SCHEMA_ERROR_MESSAGE,
         },
       ),
     systemPrompt: z
@@ -348,6 +381,12 @@ const baseScrapeOptions = z
             },
             {
               message: "Invalid JSON schema.",
+            },
+          )
+          .refine(
+            (val) => validateSchemaForOpenAI(val),
+            {
+              message: OPENAI_SCHEMA_ERROR_MESSAGE,
             },
           ),
         modes: z.enum(["json", "git-diff"]).array().optional().default([]),
@@ -562,6 +601,12 @@ export const extractV1Options = z
         },
         {
           message: "Invalid JSON schema.",
+        },
+      )
+      .refine(
+        (val) => validateSchemaForOpenAI(val),
+        {
+          message: OPENAI_SCHEMA_ERROR_MESSAGE,
         },
       ),
     limit: z.number().int().positive().finite().safe().optional(),
