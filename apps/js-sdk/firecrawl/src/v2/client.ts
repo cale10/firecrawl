@@ -36,6 +36,7 @@ import type {
   ExtractResponse,
   CrawlOptions,
   BatchScrapeOptions,
+  PaginationConfig,
 } from "./types";
 import { Watcher } from "./watcher";
 import type { WatcherOptions } from "./watcher";
@@ -145,7 +146,7 @@ export class FirecrawlClient {
    * Get the status and partial data of a crawl job.
    * @param jobId Crawl job id.
    */
-  async getCrawlStatus(jobId: string, pagination?: { autoPaginate?: boolean; maxPages?: number; maxResults?: number; maxWaitTime?: number }): Promise<CrawlJob> {
+  async getCrawlStatus(jobId: string, pagination?: PaginationConfig): Promise<CrawlJob> {
     return getCrawlStatus(this.http, jobId, pagination);
   }
   /**
@@ -201,7 +202,7 @@ export class FirecrawlClient {
    * Get the status and partial data of a batch scrape job.
    * @param jobId Batch job id.
    */
-  async getBatchScrapeStatus(jobId: string, pagination?: { autoPaginate?: boolean; maxPages?: number; maxResults?: number; maxWaitTime?: number }): Promise<BatchScrapeJob> {
+  async getBatchScrapeStatus(jobId: string, pagination?: PaginationConfig): Promise<BatchScrapeJob> {
     return getBatchScrapeStatus(this.http, jobId, pagination);
   }
   /**

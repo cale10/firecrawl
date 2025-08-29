@@ -235,11 +235,11 @@ def _fetch_all_pages(
     start_time = time.time()
     
     while current_url:
-        # Check pagination limits 
-        if max_pages and page_count >= max_pages:
+        # Check pagination limits (treat 0 as a valid limit)
+        if max_pages is not None and page_count >= max_pages:
             break
-            
-        if max_wait_time and (time.time() - start_time) > max_wait_time:
+
+        if max_wait_time is not None and (time.time() - start_time) > max_wait_time:
             break
         
         # Fetch next page
@@ -249,7 +249,7 @@ def _fetch_all_pages(
             # Log error but continue with what we have
             import logging
             logger = logging.getLogger("firecrawl")
-            logger.warning(f"Failed to fetch next page: {response.status_code}")
+            logger.warning("Failed to fetch next page", extra={"status_code": response.status_code})
             break
         
         page_data = response.json()
@@ -263,13 +263,13 @@ def _fetch_all_pages(
             if isinstance(doc_data, str):
                 continue
             else:
-                # Check max_results limit AFTER adding each document
-                if max_results and len(documents) >= max_results:
+                # Check max_results limit BEFORE adding each document
+                if max_results is not None and len(documents) >= max_results:
                     break
                 documents.append(Document(**normalize_document_input(doc_data)))
         
         # Check if we hit max_results limit
-        if max_results and len(documents) >= max_results:
+        if max_results is not None and len(documents) >= max_results:
             break
         
         # Get next URL
