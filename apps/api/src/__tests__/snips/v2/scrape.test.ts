@@ -120,6 +120,39 @@ describe("Scrape tests", () => {
     expect(response.links?.length).toBeGreaterThan(0);
   });
 
+  it.concurrent("images format works", async () => {
+    const response = await scrape({
+      url: "https://firecrawl.dev",
+      formats: ["images"],
+    }, identity);
+
+    expect(response.images).toBeDefined();
+    expect(response.images?.length).toBeGreaterThan(0);
+    // Firecrawl website should have at least the logo
+    expect(response.images?.some(img => img.includes("firecrawl"))).toBe(true);
+  });
+
+  it.concurrent("images format works with multiple formats", async () => {
+    const response = await scrape({
+      url: "https://firecrawl.dev",
+      formats: ["markdown", "links", "images"],
+    }, identity);
+
+    expect(response.markdown).toBeDefined();
+    expect(response.links).toBeDefined();
+    expect(response.images).toBeDefined();
+    expect(response.images?.length).toBeGreaterThan(0);
+    
+    // Images should include things that aren't in links
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.ico'];
+    const linkImages = response.links?.filter(link => 
+      imageExtensions.some(ext => link.toLowerCase().includes(ext))
+    ) || [];
+    
+    // Should have found more images than just those with obvious extensions in links
+    expect(response.images?.length).toBeGreaterThanOrEqual(linkImages.length);
+  });
+
   if (process.env.TEST_SUITE_SELF_HOSTED && process.env.PROXY_SERVER) {
     it.concurrent("self-hosted proxy works", async () => {
       const response = await scrape({
@@ -818,10 +851,15 @@ describe("Scrape tests", () => {
         // text on the last page
         expect(response.markdown).toContain("Redistribution and use in source and binary forms, with or without modification");
       }, scrapeTimeout * 5);
+    });
+  }
 
+  describe("URL rewriting", () => {
+    if (!process.env.TEST_SUITE_SELF_HOSTED) {
       it.concurrent("scrapes Google Docs links as PDFs", async () => {
         const response = await scrape({
           url: "https://docs.google.com/document/d/1H-hOLYssS8xXl2o5hxj4ipE7yyhZAX1s7ADYM1Hdlzo/view",
+          maxAge: 0,
         }, identity);
 
         expect(response.markdown).toContain("This is a test to confirm Google Docs scraping abilities.");
@@ -835,8 +873,35 @@ describe("Scrape tests", () => {
 
         expect(response.markdown).toContain("This is a test to confirm Google Slides scraping abilities.");
       }, scrapeTimeout * 5);
-    });
-  }
+
+      it.concurrent("scrapes Google Drive PDF files as PDFs", async () => {
+        const response = await scrape({
+          url: "https://drive.google.com/file/d/1QrgvXM2F7sgSdrhoBfdp9IMBVhUk-Ueu/view?usp=drive_link",
+          maxAge: 0,
+        }, identity);
+  
+        expect(response.markdown).toContain("This is a simple PDF file.");
+      }, scrapeTimeout * 5);
+    }
+
+    it.concurrent("scrapes Google Drive text files correctly", async () => {
+      const response = await scrape({
+        url: "https://drive.google.com/file/d/14m3ZVDnWJwwPSDHX6U6jkL7FXxOf6cHB/view?usp=sharing",
+        maxAge: 0,
+      }, identity);
+
+      expect(response.markdown).toContain("This is a simple TXT file.");
+    }, scrapeTimeout * 5);
+
+    it.concurrent("scrapes Google Sheets links correctly", async () => {
+      const response = await scrape({
+        url: "https://docs.google.com/spreadsheets/d/1DTpw_bbsf3OY17ZqEYEpW6lAmLdCRC2WfLrV0isG9ac/edit?usp=sharing",
+        maxAge: 0,
+      }, identity);
+
+      expect(response.markdown).toContain("This is a test sheet.");
+    }, scrapeTimeout * 5);
+  });
 
   if (!process.env.TEST_SUITE_SELF_HOSTED || process.env.OPENAI_API_KEY || process.env.OLLAMA_BASE_URL) {
     describe("JSON format", () => {
@@ -967,4 +1032,74 @@ describe("Scrape tests", () => {
       expect(response.metadata).toBeDefined();
     }, scrapeTimeout);
   });
+});
+
+describe("attributes format", () => {
+  it.concurrent("should extract attributes from HTML elements", async () => {
+    const response = await scrape({
+      url: "https://news.ycombinator.com",
+      formats: [
+        { type: "markdown" },
+        {
+          type: "attributes",
+          selectors: [
+            { selector: ".athing", attribute: "id" }
+          ]
+        }
+      ]
+    }, identity);
+
+    expect(response.markdown).toBeDefined();
+    expect(response.attributes).toBeDefined();
+    expect(Array.isArray(response.attributes)).toBe(true);
+    expect(response.attributes!.length).toBe(1);
+    expect(response.attributes![0]).toEqual({
+      selector: ".athing",
+      attribute: "id",
+      values: expect.any(Array)
+    });
+    expect(response.attributes![0].values.length).toBeGreaterThan(0);
+  }, scrapeTimeout);
+
+  it.concurrent("should handle multiple attribute selectors", async () => {
+    const response = await scrape({
+      url: "https://github.com/microsoft/vscode",
+      formats: [
+        {
+          type: "attributes", 
+          selectors: [
+            { selector: "[data-testid]", attribute: "data-testid" },
+            { selector: "[data-view-component]", attribute: "data-view-component" }
+          ]
+        }
+      ]
+    }, identity);
+
+    expect(response.attributes).toBeDefined();
+    expect(Array.isArray(response.attributes)).toBe(true);
+    expect(response.attributes!.length).toBe(2);
+
+    const testIdResults = response.attributes!.find(a => a.attribute === "data-testid");
+    expect(testIdResults).toBeDefined();
+    expect(testIdResults!.selector).toBe("[data-testid]");
+  }, scrapeTimeout);
+
+  it.concurrent("should return empty arrays when no attributes found", async () => {
+    const response = await scrape({
+      url: "https://httpbin.org/html",
+      formats: [
+        {
+          type: "attributes",
+          selectors: [
+            { selector: ".nonexistent", attribute: "data-test" }
+          ]
+        }
+      ]
+    }, identity);
+
+    expect(response.attributes).toBeDefined();
+    expect(Array.isArray(response.attributes)).toBe(true);
+    expect(response.attributes!.length).toBe(1);
+    expect(response.attributes![0].values).toEqual([]);
+  }, scrapeTimeout);
 });

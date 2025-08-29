@@ -35,6 +35,7 @@ export type Format =
   | "html"
   | "rawHtml"
   | "links"
+  | "images"
   | "screenshot"
   | "screenshot@fullPage"
   | "extract"
@@ -211,15 +212,28 @@ export const screenshotFormatWithOptions = z.object({
 
 export type ScreenshotFormatWithOptions = z.output<typeof screenshotFormatWithOptions>;
 
+export const attributesFormatWithOptions = z.object({
+  type: z.literal("attributes"),
+  selectors: z.array(z.object({
+    selector: z.string().describe("CSS selector to find elements"),
+    attribute: z.string().describe("Attribute name to extract (e.g., 'data-vehicle-name' or 'id')")
+  })).describe("Extract specific attributes from elements"),
+}).strict();
+
+export type AttributesFormatWithOptions = z.output<typeof attributesFormatWithOptions>;
+
+
 export type FormatObject = 
   | { type: "markdown" }
   | { type: "html" }
   | { type: "rawHtml" }
   | { type: "links" }
+  | { type: "images" }
   | { type: "summary" }
   | JsonFormatWithOptions
   | ChangeTrackingFormatWithOptions
-  | ScreenshotFormatWithOptions;
+  | ScreenshotFormatWithOptions
+  | AttributesFormatWithOptions
 
 export const pdfParserWithOptions = z.object({
   type: z.literal("pdf"),
@@ -287,10 +301,12 @@ const baseScrapeOptions = z
           z.object({ type: z.literal("html") }),
           z.object({ type: z.literal("rawHtml") }),
           z.object({ type: z.literal("links") }),
+          z.object({ type: z.literal("images") }),
           z.object({ type: z.literal("summary") }),
           jsonFormatWithOptions,
           changeTrackingFormatWithOptions,
           screenshotFormatWithOptions,
+          attributesFormatWithOptions,
         ])
         .array()
         .optional()
@@ -666,11 +682,17 @@ export type Document = {
   html?: string;
   rawHtml?: string;
   links?: string[];
+  images?: string[];
   screenshot?: string;
   extract?: any;
   json?: any;
   summary?: string;
   warning?: string;
+  attributes?: {
+    selector: string;
+    attribute: string;
+    values: string[];
+  }[];
   actions?: {
     screenshots?: string[];
     scrapes?: ScrapeActionContent[];
@@ -1386,6 +1408,7 @@ export const searchRequestSchema = z
               z.object({ type: z.literal("html") }),
               z.object({ type: z.literal("rawHtml") }),
               z.object({ type: z.literal("links") }),
+              z.object({ type: z.literal("images") }),
               z.object({ type: z.literal("summary") }),
               jsonFormatWithOptions,
               screenshotFormatWithOptions,
