@@ -16,7 +16,7 @@ import { getACUCTeam } from "../../controllers/auth";
 interface GenerateLLMsTextServiceOptions {
   generationId: string;
   teamId: string;
-  apiKeyId: number;
+  apiKeyId: number | null;
   url: string;
   maxUrls: number;
   showFullText: boolean;

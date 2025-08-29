@@ -248,7 +248,7 @@ export async function x402SearchController(
             origin: req.body.origin,
             timeout: req.body.timeout,
             scrapeOptions: req.body.scrapeOptions,
-            apiKeyId: req.acuc.api_key_id,
+            apiKeyId: req.acuc?.api_key_id ?? null,
           },
           logger,
           req.acuc?.flags ?? null,

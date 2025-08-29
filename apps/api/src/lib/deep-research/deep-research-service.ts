@@ -7,7 +7,7 @@ import { billTeam } from "../../services/billing/credit_billing";
 import { ExtractOptions } from "../../controllers/v1/types";
 import { CostTracking } from "../extract/extraction-service";
 import { getACUCTeam } from "../../controllers/auth";
-interface DeepResearchServiceOptions {
+export interface DeepResearchServiceOptions {
   researchId: string;
   teamId: string;
   query: string;

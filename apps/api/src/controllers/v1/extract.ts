@@ -30,15 +30,15 @@ export async function oldExtract(
       result = await performExtraction(extractId, {
         request: req.body,
         teamId: req.auth.team_id,
-        subId: req.acuc.sub_id ?? undefined,
-        apiKeyId: req.acuc.api_key_id,
+        subId: req.acuc?.sub_id ?? undefined,
+        apiKeyId: req.acuc?.api_key_id ?? null,
       });
     } else {
       result = await performExtraction_F0(extractId, {
         request: req.body,
         teamId: req.auth.team_id,
         subId: req.acuc?.sub_id ?? undefined,
-        apiKeyId: req.acuc.api_key_id,
+        apiKeyId: req.acuc?.api_key_id ?? null,
       });
     }
 
@@ -105,7 +105,7 @@ export async function extractController(
     subId: req.acuc?.sub_id,
     extractId,
     agent: req.body.agent,
-    apiKeyId: req.acuc.api_key_id,
+    apiKeyId: req.acuc?.api_key_id ?? null,
   };
 
   if (
