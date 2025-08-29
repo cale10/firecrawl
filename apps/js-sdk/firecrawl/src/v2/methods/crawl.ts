@@ -10,7 +10,7 @@ import {
 import { HttpClient } from "../utils/httpClient";
 import { ensureValidScrapeOptions } from "../utils/validation";
 import { normalizeAxiosError, throwForBadResponse } from "../utils/errorHandler";
-import { HttpClient as _Http } from "../utils/httpClient";
+import type { HttpClient as _Http } from "../utils/httpClient";
 
 export type CrawlRequest = CrawlOptions & {
   url: string;
