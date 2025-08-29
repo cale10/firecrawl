@@ -6,10 +6,12 @@ export type FormatString =
   | "html"
   | "rawHtml"
   | "links"
+  | "images"
   | "screenshot"
   | "summary"
   | "changeTracking"
-  | "json";
+  | "json"
+  | "attributes";
 
 export interface Viewport {
   width: number;
@@ -40,13 +42,21 @@ export interface ChangeTrackingFormat extends Format {
   prompt?: string;
   tag?: string;
 }
+export interface AttributesFormat extends Format {
+  type: "attributes";
+  selectors: Array<{
+    selector: string;
+    attribute: string;
+  }>;
+}
 
 export type FormatOption =
   | FormatString
   | Format
   | JsonFormat
   | ChangeTrackingFormat
-  | ScreenshotFormat;
+  | ScreenshotFormat
+  | AttributesFormat;
 
 export interface LocationConfig {
   country?: string;
@@ -167,7 +177,13 @@ export interface Document {
   summary?: string;
   metadata?: DocumentMetadata;
   links?: string[];
+  images?: string[];
   screenshot?: string;
+  attributes?: Array<{
+    selector: string;
+    attribute: string;
+    values: string[];
+  }>;
   actions?: Record<string, unknown>;
   warning?: string;
   changeTracking?: Record<string, unknown>;
