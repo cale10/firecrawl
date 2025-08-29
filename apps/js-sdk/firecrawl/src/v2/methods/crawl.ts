@@ -11,6 +11,7 @@ import { HttpClient } from "../utils/httpClient";
 import { ensureValidScrapeOptions } from "../utils/validation";
 import { normalizeAxiosError, throwForBadResponse } from "../utils/errorHandler";
 import type { HttpClient as _Http } from "../utils/httpClient";
+import { fetchAllPages } from "../utils/pagination";
 
 export type CrawlRequest = CrawlOptions & {
   url: string;
@@ -80,7 +81,7 @@ export async function getCrawlStatus(
       };
     }
 
-    const aggregated = await fetchAllCrawlPages(http, body.next, initialDocs, pagination);
+    const aggregated = await fetchAllPages(http, body.next, initialDocs, pagination);
 
     return {
       status: body.status,
@@ -164,42 +165,3 @@ export async function crawlParamsPreview(http: HttpClient, url: string, prompt: 
     throw err;
   }
 }
-
-async function fetchAllCrawlPages(
-  http: _Http,
-  nextUrl: string,
-  initial: Document[],
-  pagination?: PaginationConfig
-): Promise<Document[]> {
-  const docs = initial.slice();
-  let current: string | null = nextUrl;
-  let pageCount = 0;
-  const maxPages = pagination?.maxPages ?? undefined;
-  const maxResults = pagination?.maxResults ?? undefined;
-  const maxWaitTime = pagination?.maxWaitTime ?? undefined;
-  const started = Date.now();
-
-  while (current) {
-    if (maxPages != null && pageCount >= maxPages) break;
-    if (maxWaitTime != null && (Date.now() - started) / 1000 > maxWaitTime) break;
-
-    let payload: { success: boolean; next?: string | null; data?: Document[] } | null = null;
-    try {
-      const res = await http.get<{ success: boolean; next?: string | null; data?: Document[] }>(current);
-      payload = res.data;
-    } catch (err: any) {
-      // axios rejects on non-2xx; break pagination loop on fetch error
-      break;
-    }
-    if (!payload?.success) break;
-    for (const d of payload.data || []) {
-      if (maxResults != null && docs.length >= maxResults) break;
-      docs.push(d as Document);
-    }
-    if (maxResults != null && docs.length >= maxResults) break;
-    current = (payload.next ?? null) as string | null;
-    pageCount += 1;
-  }
-  return docs;
-}
-
