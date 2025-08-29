@@ -223,7 +223,7 @@ export type FormatObject =
 
 export const pdfParserWithOptions = z.object({
   type: z.literal("pdf"),
-  maxPages: z.number().int().positive().finite().max(1000).optional(),
+  maxPages: z.number().int().positive().finite().max(10000).optional(),
 }).strict();
 
 export const parsersSchema = z
