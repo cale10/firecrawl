@@ -539,7 +539,7 @@ class PDFAction(BaseModel):
 class PDFParser(BaseModel):
     """PDF parser configuration with optional page limit."""
     type: Literal["pdf"] = "pdf"
-    max_pages: Optional[int] = Field(None, ge=1, le=1000)
+    max_pages: Optional[int] = Field(None, ge=1, le=10000)
 
 # Location types
 class Location(BaseModel):
