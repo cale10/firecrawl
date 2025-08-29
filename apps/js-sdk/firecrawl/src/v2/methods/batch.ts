@@ -4,6 +4,7 @@ import {
   type CrawlErrorsResponse,
   type Document,
   type BatchScrapeOptions,
+  type PaginationConfig,
 } from "../types";
 import { HttpClient } from "../utils/httpClient";
 import { ensureValidScrapeOptions } from "../utils/validation";
@@ -47,19 +48,38 @@ export async function startBatchScrape(
   }
 }
 
-export async function getBatchScrapeStatus(http: HttpClient, jobId: string): Promise<BatchScrapeJob> {
+export async function getBatchScrapeStatus(
+  http: HttpClient,
+  jobId: string,
+  pagination?: PaginationConfig
+): Promise<BatchScrapeJob> {
   try {
     const res = await http.get<{ success: boolean; status: BatchScrapeJob["status"]; completed?: number; total?: number; creditsUsed?: number; expiresAt?: string; next?: string | null; data?: Document[] }>(`/v2/batch/scrape/${jobId}`);
     if (res.status !== 200 || !res.data?.success) throwForBadResponse(res, "get batch scrape status");
     const body = res.data;
+    const initialDocs = (body.data || []) as Document[];
+    const auto = pagination?.autoPaginate ?? true;
+    if (!auto || !body.next) {
+      return {
+        status: body.status,
+        completed: body.completed ?? 0,
+        total: body.total ?? 0,
+        creditsUsed: body.creditsUsed,
+        expiresAt: body.expiresAt,
+        next: body.next ?? null,
+        data: initialDocs,
+      };
+    }
+
+    const aggregated = await fetchAllBatchPages(http, body.next, initialDocs, pagination);
     return {
       status: body.status,
       completed: body.completed ?? 0,
       total: body.total ?? 0,
       creditsUsed: body.creditsUsed,
       expiresAt: body.expiresAt,
-      next: body.next ?? null,
-      data: (body.data || []) as Document[],
+      next: null,
+      data: aggregated,
     };
   } catch (err: any) {
     if (err?.isAxiosError) return normalizeAxiosError(err, "get batch scrape status");
@@ -115,5 +135,37 @@ export function chunkUrls(urls: string[], chunkSize = 100): string[][] {
   const chunks: string[][] = [];
   for (let i = 0; i < urls.length; i += chunkSize) chunks.push(urls.slice(i, i + chunkSize));
   return chunks;
+}
+
+async function fetchAllBatchPages(
+  http: HttpClient,
+  nextUrl: string,
+  initial: Document[],
+  pagination?: PaginationConfig
+): Promise<Document[]> {
+  const docs = initial.slice();
+  let current = nextUrl;
+  let pageCount = 0;
+  const maxPages = pagination?.maxPages ?? undefined;
+  const maxResults = pagination?.maxResults ?? undefined;
+  const maxWaitTime = pagination?.maxWaitTime ?? undefined;
+  const started = Date.now();
+
+  while (current) {
+    if (maxPages != null && pageCount >= maxPages) break;
+    if (maxWaitTime != null && (Date.now() - started) / 1000 > maxWaitTime) break;
+
+    const res = await http.get<{ success: boolean; next?: string | null; data?: Document[] }>(current);
+    if (res.status >= 400 || !res.data?.success) break;
+    const payload = res.data;
+    for (const d of payload.data || []) {
+      if (maxResults != null && docs.length >= maxResults) break;
+      docs.push(d as Document);
+    }
+    if (maxResults != null && docs.length >= maxResults) break;
+    current = payload.next ?? null as any;
+    pageCount += 1;
+  }
+  return docs;
 }
 

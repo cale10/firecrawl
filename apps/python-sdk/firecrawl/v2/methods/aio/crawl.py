@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from ...types import (
     CrawlRequest,
     CrawlJob,
@@ -10,11 +10,13 @@ from ...types import (
     CrawlErrorsResponse,
     ActiveCrawlsResponse,
     ActiveCrawl,
+    PaginationConfig,
 )
 from ...utils.error_handler import handle_response_error
 from ...utils.validation import prepare_scrape_options
 from ...utils.http_client_async import AsyncHttpClient
 from ...utils.normalize import normalize_document_input
+import time
 
 
 def _prepare_crawl_request(request: CrawlRequest) -> dict:
@@ -68,7 +70,26 @@ async def start_crawl(client: AsyncHttpClient, request: CrawlRequest) -> CrawlRe
     raise Exception(body.get("error", "Unknown error occurred"))
 
 
-async def get_crawl_status(client: AsyncHttpClient, job_id: str) -> CrawlJob:
+async def get_crawl_status(
+    client: AsyncHttpClient, 
+    job_id: str,
+    pagination_config: Optional[PaginationConfig] = None
+) -> CrawlJob:
+    """
+    Get the status of a crawl job.
+    
+    Args:
+        client: Async HTTP client instance
+        job_id: ID of the crawl job
+        auto_paginate: Whether to automatically fetch all pages
+        pagination_config: Optional configuration for pagination limits
+        
+    Returns:
+        CrawlJob with current status and data
+        
+    Raises:
+        Exception: If the status check fails
+    """
     response = await client.get(f"/v2/crawl/{job_id}")
     if response.status_code >= 400:
         handle_response_error(response, "get crawl status")
@@ -79,16 +100,99 @@ async def get_crawl_status(client: AsyncHttpClient, job_id: str) -> CrawlJob:
             if isinstance(doc_data, dict):
                 normalized = normalize_document_input(doc_data)
                 documents.append(Document(**normalized))
+        
+        # Handle pagination if requested
+        auto_paginate = pagination_config.auto_paginate if pagination_config else True
+        if auto_paginate and body.get("next"):
+            documents = await _fetch_all_pages_async(
+                client, 
+                body.get("next"), 
+                documents, 
+                pagination_config
+            )
+        
         return CrawlJob(
             status=body.get("status"),
             completed=body.get("completed", 0),
             total=body.get("total", 0),
             credits_used=body.get("creditsUsed", 0),
             expires_at=body.get("expiresAt"),
-            next=body.get("next"),
+            next=body.get("next") if not auto_paginate else None,
             data=documents,
         )
     raise Exception(body.get("error", "Unknown error occurred"))
+
+
+async def _fetch_all_pages_async(
+    client: AsyncHttpClient,
+    next_url: str,
+    initial_documents: List[Document],
+    pagination_config: Optional[PaginationConfig] = None
+) -> List[Document]:
+    """
+    Fetch all pages of crawl results asynchronously.
+    
+    Args:
+        client: Async HTTP client instance
+        next_url: URL for the next page
+        initial_documents: Documents from the first page
+        pagination_config: Optional configuration for pagination limits
+        
+    Returns:
+        List of all documents from all pages
+    """
+    documents = initial_documents.copy()
+    current_url = next_url
+    page_count = 0
+    
+    # Apply pagination limits
+    max_pages = pagination_config.max_pages if pagination_config else None
+    max_results = pagination_config.max_results if pagination_config else None
+    max_wait_time = pagination_config.max_wait_time if pagination_config else None
+    
+    start_time = time.time()
+    
+    while current_url:
+        # Check pagination limits
+        if max_pages and page_count >= max_pages:
+            break
+            
+        if max_wait_time and (time.time() - start_time) > max_wait_time:
+            break
+        
+        # Fetch next page
+        response = await client.get(current_url)
+        
+        if response.status_code >= 400:
+            # Log error but continue with what we have
+            import logging
+            logger = logging.getLogger("firecrawl")
+            logger.warning(f"Failed to fetch next page: {response.status_code}")
+            break
+        
+        page_data = response.json()
+        
+        if not page_data.get("success"):
+            break
+        
+        # Add documents from this page
+        for doc_data in page_data.get("data", []):
+            if isinstance(doc_data, dict):
+                # Check max_results limit
+                if max_results and len(documents) >= max_results:
+                    break
+                normalized = normalize_document_input(doc_data)
+                documents.append(Document(**normalized))
+        
+        # Check if we hit max_results limit
+        if max_results and len(documents) >= max_results:
+            break
+        
+        # Get next URL
+        current_url = page_data.get("next")
+        page_count += 1
+    
+    return documents
 
 
 async def cancel_crawl(client: AsyncHttpClient, job_id: str) -> bool:

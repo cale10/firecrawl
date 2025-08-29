@@ -145,8 +145,8 @@ export class FirecrawlClient {
    * Get the status and partial data of a crawl job.
    * @param jobId Crawl job id.
    */
-  async getCrawlStatus(jobId: string): Promise<CrawlJob> {
-    return getCrawlStatus(this.http, jobId);
+  async getCrawlStatus(jobId: string, pagination?: { autoPaginate?: boolean; maxPages?: number; maxResults?: number; maxWaitTime?: number }): Promise<CrawlJob> {
+    return getCrawlStatus(this.http, jobId, pagination);
   }
   /**
    * Cancel a crawl job.
@@ -201,8 +201,8 @@ export class FirecrawlClient {
    * Get the status and partial data of a batch scrape job.
    * @param jobId Batch job id.
    */
-  async getBatchScrapeStatus(jobId: string): Promise<BatchScrapeJob> {
-    return getBatchScrapeStatus(this.http, jobId);
+  async getBatchScrapeStatus(jobId: string, pagination?: { autoPaginate?: boolean; maxPages?: number; maxResults?: number; maxWaitTime?: number }): Promise<BatchScrapeJob> {
+    return getBatchScrapeStatus(this.http, jobId, pagination);
   }
   /**
    * Retrieve batch scrape errors and robots.txt blocks.
