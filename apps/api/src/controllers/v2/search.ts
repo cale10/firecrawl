@@ -313,7 +313,7 @@ export async function searchController(
         timeout: req.body.timeout,
         scrapeOptions: req.body.scrapeOptions,
         bypassBilling: !isAsyncScraping, // Async mode bills per job, sync mode bills manually
-        apiKeyId: req.acuc.api_key_id,
+        apiKeyId: req.acuc?.api_key_id ?? null,
       };
       
       const directToBullMQ = (req.acuc?.price_credits ?? 0) <= 3000;
@@ -551,7 +551,7 @@ export async function searchController(
     // - For async scraping: Jobs handle their own billing
     // - For no scraping: Bill based on search results count
     if (!isSearchPreview && (!shouldScrape || (shouldScrape && !isAsyncScraping))) {
-      billTeam(req.auth.team_id, req.acuc.sub_id, credits_billed, req.acuc.api_key_id).catch((error) => {
+      billTeam(req.auth.team_id, req.acuc?.sub_id ?? undefined, credits_billed, req.acuc?.api_key_id ?? null).catch((error) => {
         logger.error(`Failed to bill team ${req.acuc?.sub_id} for ${credits_billed} credits: ${error}`);
       });
     }
