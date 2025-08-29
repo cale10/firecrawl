@@ -10,74 +10,90 @@ from firecrawl.v2.types import PaginationConfig
 # Initialize the client
 client = FirecrawlApp(api_key="your-api-key")
 
-# Example 1: Auto-pagination (default behavior)
-print("=== Example 1: Auto-pagination (default) ===")
-crawl_job = client.crawl("https://example.com", limit=100)
-status = client.get_crawl_status(crawl_job.id)
-print(f"Total documents fetched: {len(status.data)}")
-print(f"Next URL: {status.next}")  # Should be None since auto-pagination is enabled
+# Example 1: Simple crawl - automatically waits for completion and returns all results
+# Use this when you want all the data and don't need to control pagination
+print("=== Example 1: Simple crawl (default) ===")
+crawl_result = client.crawl("https://example.com", limit=100)
+print(f"Total documents fetched: {len(crawl_result.data)}")
+print(f"Next URL: {crawl_result.next}")  # Should be None since auto-pagination is enabled
 
-# Example 2: Manual pagination - get only first page
-print("\n=== Example 2: Manual pagination ===")
-crawl_job = client.crawl("https://example.com", limit=100)
+# Example 2: Manual crawl with pagination control
+# Use this when you need to control how many pages to fetch or want to process results incrementally
+print("\n=== Example 2: Manual crawl with pagination control ===")
+crawl_job = client.start_crawl("https://example.com", limit=100)
+
+# Get just the first page of results (useful for large crawls where you want to process incrementally)
 pagination_config = PaginationConfig(auto_paginate=False)
 status = client.get_crawl_status(crawl_job.id, pagination_config=pagination_config)
 print(f"Documents from first page: {len(status.data)}")
 print(f"Next URL: {status.next}")  # Will show the next page URL
 
 # Example 3: Limited pagination - fetch only 3 pages
+# Useful for controlling memory usage or processing time
 print("\n=== Example 3: Limited pagination ===")
 pagination_config = PaginationConfig(max_pages=3)
 status = client.get_crawl_status(crawl_job.id, pagination_config=pagination_config)
 print(f"Documents from first 3 pages: {len(status.data)}")
 
 # Example 4: Result-limited pagination - stop after 50 results
+# Useful when you only need a specific number of results
 print("\n=== Example 4: Result-limited pagination ===")
 pagination_config = PaginationConfig(max_results=50)
 status = client.get_crawl_status(crawl_job.id, pagination_config=pagination_config)
 print(f"Documents (max 50): {len(status.data)}")
 
 # Example 5: Time-limited pagination - stop after 30 seconds
+# Useful for controlling processing time in time-sensitive applications
 print("\n=== Example 5: Time-limited pagination ===")
 pagination_config = PaginationConfig(max_wait_time=30)
 status = client.get_crawl_status(crawl_job.id, pagination_config=pagination_config)
 print(f"Documents fetched within 30 seconds: {len(status.data)}")
 
 # Example 6: Combined pagination limits
+# Useful for fine-grained control over resource usage
 print("\n=== Example 6: Combined limits ===")
 pagination_config = PaginationConfig(
-    max_pages=5,
-    max_results=100,
-    max_wait_time=60
+    max_pages=5,        # Only fetch 5 pages maximum
+    max_results=100,    # Only fetch 100 results maximum
+    max_wait_time=60    # Wait maximum 60 seconds for completion
 )
 status = client.get_crawl_status(crawl_job.id, pagination_config=pagination_config)
 print(f"Documents with combined limits: {len(status.data)}")
 
-# Example 7: Batch scrape with pagination
-print("\n=== Example 7: Batch scrape pagination ===")
+# Example 7: Simple batch scrape - automatically waits for completion and returns all results
+# Use this when you want all the data from multiple URLs and don't need to control pagination
+print("\n=== Example 7: Simple batch scrape (default) ===")
 urls = ["https://example1.com", "https://example2.com", "https://example3.com"]
-batch_job = client.batch_scrape_urls(urls)
+batch_result = client.batch_scrape(urls)
+print(f"Batch scrape documents: {len(batch_result.data)}")
+
+# Example 8: Manual batch scrape with pagination control
+# Use this when you need to control how many pages to fetch or want to process results incrementally
+print("\n=== Example 8: Manual batch scrape with pagination control ===")
+batch_job = client.start_batch_scrape(urls)
 status = client.get_batch_scrape_status(batch_job.id)
 print(f"Batch scrape documents: {len(status.data)}")
 
-# Example 8: Async usage
-print("\n=== Example 8: Async pagination ===")
+# Example 9: Async usage
+print("\n=== Example 9: Async pagination ===")
 import asyncio
 from firecrawl import AsyncFirecrawlApp
 
 async def async_example():
     async_client = AsyncFirecrawlApp(api_key="your-api-key")
     
-    # Start a crawl
-    crawl_job = await async_client.async_crawl_url("https://example.com", limit=50)
+    # Simple async crawl - automatically waits for completion
+    crawl_result = await async_client.crawl("https://example.com", limit=50)
+    print(f"Async crawl documents: {len(crawl_result.data)}")
     
-    # Get status with pagination
+    # Manual async crawl with pagination
+    crawl_job = await async_client.start_crawl("https://example.com", limit=50)
     pagination_config = PaginationConfig(max_pages=2)
     status = await async_client.get_crawl_status(
         crawl_job.id, 
         pagination_config=pagination_config
     )
-    print(f"Async crawl documents: {len(status.data)}")
+    print(f"Async crawl with pagination: {len(status.data)}")
 
 # Run async example
 # asyncio.run(async_example())
