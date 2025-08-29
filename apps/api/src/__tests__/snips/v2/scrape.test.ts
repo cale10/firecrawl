@@ -1105,7 +1105,7 @@ describe("attributes format", () => {
 
   describe("Schema validation for additionalProperties", () => {
     if (!process.env.TEST_SUITE_SELF_HOSTED || process.env.OPENAI_API_KEY || process.env.OLLAMA_BASE_URL) {
-      it("should reject scrape request with additionalProperties in json format schema", async () => {
+      it("should normalize scrape request with additionalProperties in json format schema", async () => {
         const identity = await idmux({ name: "schema-validation-test" });
         
         const response = await fetch(`${process.env.TEST_URL}/v2/scrape`, {
@@ -1131,13 +1131,10 @@ describe("attributes format", () => {
           })
         });
 
-        expect(response.status).toBe(400);
-        const data = await response.json();
-        expect(data.error).toContain("additionalProperties");
-        expect(data.error).toContain("OpenAI");
+        expect(response.status).toBe(200);
       }, scrapeTimeout);
 
-      it("should reject extract request with additionalProperties in schema", async () => {
+      it("should normalize extract request with additionalProperties in schema", async () => {
         const identity = await idmux({ name: "schema-validation-test" });
         
         const response = await fetch(`${process.env.TEST_URL}/v2/extract`, {
@@ -1158,13 +1155,10 @@ describe("attributes format", () => {
           })
         });
 
-        expect(response.status).toBe(400);
-        const data = await response.json();
-        expect(data.error).toContain("additionalProperties");
-        expect(data.error).toContain("OpenAI");
+        expect(response.status).toBe(200);
       }, scrapeTimeout);
 
-      it("should reject changeTracking format with additionalProperties", async () => {
+      it("should normalize changeTracking format with additionalProperties", async () => {
         const identity = await idmux({ name: "schema-validation-test" });
         
         const response = await fetch(`${process.env.TEST_URL}/v2/scrape`, {
@@ -1191,10 +1185,7 @@ describe("attributes format", () => {
           })
         });
 
-        expect(response.status).toBe(400);
-        const data = await response.json();
-        expect(data.error).toContain("additionalProperties");
-        expect(data.error).toContain("OpenAI");
+        expect(response.status).toBe(200);
       }, scrapeTimeout);
 
       it("should accept valid schema without additionalProperties", async () => {
@@ -1226,7 +1217,36 @@ describe("attributes format", () => {
         expect(response.status).toBe(200);
       }, scrapeTimeout);
 
-      it("should reject schema with object type without properties", async () => {
+      it("should reject schema-less dictionary (no properties but additionalProperties: true)", async () => {
+        const identity = await idmux({ name: "schema-validation-test" });
+        
+        const response = await fetch(`${process.env.TEST_URL}/v2/scrape`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${identity.apiKey}`
+          },
+          body: JSON.stringify({
+            url: "https://example.com",
+            formats: [
+              {
+                type: "json",
+                schema: {
+                  type: "object",
+                  additionalProperties: true
+                }
+              }
+            ]
+          })
+        });
+
+        expect(response.status).toBe(400);
+        const data = await response.json();
+        expect(data.error).toContain("OpenAI");
+        expect(data.error).toContain("schema-less dictionary");
+      }, scrapeTimeout);
+
+      it("should normalize schema with object type without properties (but no additionalProperties)", async () => {
         const identity = await idmux({ name: "schema-validation-test" });
         
         const response = await fetch(`${process.env.TEST_URL}/v2/scrape`, {
@@ -1255,10 +1275,7 @@ describe("attributes format", () => {
           })
         });
 
-        expect(response.status).toBe(400);
-        const data = await response.json();
-        expect(data.error).toContain("OpenAI");
-        expect(data.error).toContain("properties");
+        expect(response.status).toBe(200);
       }, scrapeTimeout);
     }
   });
