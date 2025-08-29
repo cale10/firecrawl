@@ -334,7 +334,7 @@ def wait_for_crawl_completion(
             return crawl_job
         
         # Check timeout
-        if timeout and (time.monotonic() - start_time) > timeout:
+        if timeout is not None and (time.monotonic() - start_time) > timeout:
             raise TimeoutError(f"Crawl job {job_id} did not complete within {timeout} seconds")
         
         # Wait before next poll
