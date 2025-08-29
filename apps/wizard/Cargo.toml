@@ -1,0 +1,12 @@
+[package]
+name = "wizard"
+version = "0.1.0"
+edition = "2024"
+authors = ["mogery <mogery@sideguide.dev>"]
+
+[dependencies]
+oxc_parser = "0.83"
+oxc_span = "0.83"
+oxc_allocator = "0.83"
+oxc_ast = "0.83"
+oxc_resolver = "11"
