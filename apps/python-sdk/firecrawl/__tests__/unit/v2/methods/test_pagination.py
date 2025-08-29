@@ -218,7 +218,7 @@ class TestCrawlPagination:
         # Test with max_wait_time=1 second
         pagination_config = PaginationConfig(auto_paginate=True, max_wait_time=1)
         
-        with patch('time.time', side_effect=[0, 2]):  # Simulate 2 seconds elapsed
+        with patch('firecrawl.v2.methods.crawl.time.monotonic', side_effect=[0, 2]):  # Simulate 2 seconds elapsed
             result = get_crawl_status(self.mock_client, self.job_id, pagination_config)
         
         assert len(result.data) == 1  # Should stop due to timeout
