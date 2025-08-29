@@ -170,8 +170,7 @@ export async function getLinksFromSitemap(
             (url) =>
               url.loc &&
               url.loc.length > 0 &&
-              !url.loc[0].trim().toLowerCase().endsWith(".xml") &&
-              !WebCrawler.prototype.isFile(url.loc[0].trim()),
+              !url.loc[0].trim().toLowerCase().endsWith(".xml"),
           )
           .map((url) => url.loc[0].trim());
         count += validUrls.length;
