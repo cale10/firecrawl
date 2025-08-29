@@ -67,6 +67,8 @@ async def start_crawl(client: AsyncHttpClient, request: CrawlRequest) -> CrawlRe
     Args:
         client: Async HTTP client instance
         request: CrawlRequest containing URL and options
+        auto_paginate: Whether to automatically fetch all pages
+        pagination_config: Optional configuration for pagination limits
         
     Returns:
         CrawlResponse with job information

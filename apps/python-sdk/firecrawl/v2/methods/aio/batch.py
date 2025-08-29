@@ -124,10 +124,10 @@ async def _fetch_all_batch_pages_async(
     
     while current_url:
         # Check pagination limits
-        if max_pages and page_count >= max_pages:
+        if (max_pages is not None) and (page_count >= max_pages):
             break
             
-        if max_wait_time and (time.time() - start_time) > max_wait_time:
+        if (max_wait_time is not None) and (time.time() - start_time) > max_wait_time:
             break
         
         # Fetch next page
@@ -149,13 +149,13 @@ async def _fetch_all_batch_pages_async(
         for doc in page_data.get("data", []) or []:
             if isinstance(doc, dict):
                 # Check max_results limit
-                if max_results and len(documents) >= max_results:
+                if (max_results is not None) and (len(documents) >= max_results):
                     break
                 normalized = normalize_document_input(doc)
                 documents.append(Document(**normalized))
         
         # Check if we hit max_results limit
-        if max_results and len(documents) >= max_results:
+        if (max_results is not None) and (len(documents) >= max_results):
             break
         
         # Get next URL
