@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { protocolIncluded, checkUrl } from "../../lib/validateUrl";
-import { countries } from "../../lib/validate-country";
 import {
   ExtractorOptions,
   PageOptions,
@@ -318,11 +317,11 @@ const baseScrapeOptions = z
           .refine(
             (val) =>
               !val ||
-              Object.keys(countries).includes(val.toUpperCase()) ||
-              val === "US-generic",
+              val === "US-generic" ||
+              /^[A-Z]{2}(-[A-Z0-9]{1,3})?$/i.test(val),
             {
               message:
-                "Invalid country code. Please use a valid ISO 3166-1 alpha-2 country code.",
+                "Invalid country code. Please use a valid ISO 3166-1 alpha-2 country code or ISO 3166-2 subdivision code (e.g., 'US', 'US-CA', 'DE-BY').",
             },
           )
           .transform((val) => (val ? val.toUpperCase() : "US-generic")),
