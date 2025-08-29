@@ -77,10 +77,10 @@ print(f"Batch scrape documents: {len(status.data)}")
 # Example 9: Async usage
 print("\n=== Example 9: Async pagination ===")
 import asyncio
-from firecrawl import AsyncFirecrawlApp
+from firecrawl import AsyncFirecrawl
 
 async def async_example():
-    async_client = AsyncFirecrawlApp(api_key="your-api-key")
+    async_client = AsyncFirecrawl(api_key="your-api-key")
     
     # Simple async crawl - automatically waits for completion
     crawl_result = await async_client.crawl("https://example.com", limit=50)
