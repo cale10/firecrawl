@@ -3,7 +3,7 @@ import { getACUCTeam } from "../auth";
 import { AuthCreditUsageChunkFromTeam, RequestWithAuth } from "./types";
 import { Response } from "express";
 import { redisEvictConnection } from "../../services/redis";
-import { cleanOldConcurrencyLimitedJobs, cleanOldConcurrencyLimitEntries, countConcurrencyLimitedJobs, countConcurrencyLimitActiveJobs } from "../../lib/concurrency-limit";
+import { cleanOldConcurrencyLimitedJobs, cleanOldConcurrencyLimitEntries, getConcurrencyLimitActiveJobsCount, getConcurrencyQueueJobsCount } from "../../lib/concurrency-limit";
 
 export type QueueStatusResponse = {
     success: boolean;
@@ -23,9 +23,9 @@ export async function queueStatusController(req: RequestWithAuth<{}, undefined, 
   }
 
   await cleanOldConcurrencyLimitEntries(req.auth.team_id);
-  const activeJobsOfTeam = await countConcurrencyLimitActiveJobs(req.auth.team_id);
+  const activeJobsOfTeam = await getConcurrencyLimitActiveJobsCount(req.auth.team_id);
   await cleanOldConcurrencyLimitedJobs(req.auth.team_id);
-  const queuedJobsOfTeam = await countConcurrencyLimitedJobs(req.auth.team_id);
+  const queuedJobsOfTeam = await getConcurrencyQueueJobsCount(req.auth.team_id);
 
   const mostRecentSuccess = await redisEvictConnection.get("most-recent-success:" + req.auth.team_id);
 
@@ -35,7 +35,7 @@ export async function queueStatusController(req: RequestWithAuth<{}, undefined, 
     jobsInQueue: activeJobsOfTeam + queuedJobsOfTeam,
     activeJobsInQueue: activeJobsOfTeam,
     waitingJobsInQueue: queuedJobsOfTeam,
-    maxConcurrency: req.acuc?.concurrency ?? 1,
+    maxConcurrency: Math.max(req.acuc?.concurrency ?? 1, otherACUC?.concurrency ?? 1),
 
     mostRecentSuccess: mostRecentSuccess ? new Date(mostRecentSuccess).toISOString() : null,
   });

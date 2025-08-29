@@ -1602,7 +1602,7 @@ export default class FirecrawlApp {
    * @param {AxiosResponse} response - The response from the API.
    * @param {string} action - The action being performed when the error occurred.
    */
-  handleError(response: AxiosResponse, action: string): void {
+  handleError(response: AxiosResponse, action: string): never {
     if (!response) {
       throw new FirecrawlError(
         `No response received while trying to ${action}. This may be a network error or the server is unreachable.`,
@@ -2048,7 +2048,7 @@ export default class FirecrawlApp {
    * Gets metrics about the team's scrape queue.
    * @returns The current queue status.
    */
-  async getQueueStatus(): Promise<QueueStatusResponse> {
+  async getQueueStatus(): Promise<QueueStatusResponse | ErrorResponse> {
     const headers = this.prepareHeaders();
     try {
       const response: AxiosResponse = await this.getRequest(
@@ -2056,7 +2056,11 @@ export default class FirecrawlApp {
         headers
       );
 
-      return response.data;
+      if (response.status === 200) {
+        return response.data;
+      } else {
+        this.handleError(response, "get queue status");
+      }
     } catch (error: any) {
       if (error.response?.data?.error) {
         throw new FirecrawlError(`Request failed with status code ${error.response.status}. Error: ${error.response.data.error} ${error.response.data.details ? ` - ${JSON.stringify(error.response.data.details)}` : ''}`, error.response.status);
@@ -2064,6 +2068,7 @@ export default class FirecrawlApp {
         throw new FirecrawlError(error.message, 500);
       }
     }
+    return { success: false, error: "Internal server error." };
   }
 }
 

@@ -20,10 +20,10 @@ export async function cleanOldConcurrencyLimitEntries(
   await redisEvictConnection.zremrangebyscore(constructKey(team_id), -Infinity, now);
 }
 
-export async function countConcurrencyLimitActiveJobs(
+export async function getConcurrencyLimitActiveJobsCount(
   team_id: string,
 ): Promise<number> {
-  return await redisEvictConnection.zcard(constructKey(team_id));
+  return await redisEvictConnection.zcount(constructKey(team_id), Date.now(), Infinity);
 }
 
 export async function getConcurrencyLimitActiveJobs(
@@ -71,12 +71,6 @@ export async function cleanOldConcurrencyLimitedJobs(
   await redisEvictConnection.zremrangebyscore(constructQueueKey(team_id), -Infinity, now);
 }
 
-export async function countConcurrencyLimitedJobs(
-  team_id: string,
-): Promise<number> {
-  return await redisEvictConnection.zcard(constructQueueKey(team_id));
-}
-
 export async function takeConcurrencyLimitedJob(
   team_id: string,
 ): Promise<ConcurrencyLimitedJob | null> {
@@ -107,8 +101,7 @@ export async function getConcurrencyLimitedJobs(
 }
 
 export async function getConcurrencyQueueJobsCount(team_id: string): Promise<number> {
-  const count = await redisEvictConnection.zcard(constructQueueKey(team_id));
-  return count;
+  return await redisEvictConnection.zcount(constructQueueKey(team_id), Date.now(), Infinity);
 }
 
 export async function cleanOldCrawlConcurrencyLimitEntries(

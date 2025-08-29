@@ -39,9 +39,9 @@ export async function getTokenUsage(http: HttpClient): Promise<TokenUsage> {
 
 export async function getQueueStatus(http: HttpClient): Promise<QueueStatusResponse> {
   try {
-    const res = await http.get<{ success: boolean; data?: QueueStatusResponse }>("/v2/team/queue-status");
+    const res = await http.get<QueueStatusResponse>("/v2/team/queue-status");
     if (res.status !== 200 || !res.data?.success) throwForBadResponse(res, "get queue status");
-    return res.data.data || (res.data as any);
+    return res.data;
   } catch (err: any) {
     if (err?.isAxiosError) return normalizeAxiosError(err, "get queue status");
     throw err;

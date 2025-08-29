@@ -491,7 +491,7 @@ class QueueStatusResponse(BaseModel):
     active_jobs_in_queue: int
     waiting_jobs_in_queue: int
     max_concurrency: int
-    most_recent_success: Optional[str] = None
+    most_recent_success: Optional[datetime] = None
 
 # Action types
 class WaitAction(BaseModel):

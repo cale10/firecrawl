@@ -824,7 +824,9 @@ export const processJobInternal = async (job: Job & { id: string }) => {
                     const result = await processJob(job);
                     if (result.success) {
                         try {
-                            await redisEvictConnection.set("most-recent-success:" + job.data.team_id, new Date().toISOString(), "EX", 60 * 60 * 24);
+                            if (job.data.team_id) {
+                                await redisEvictConnection.set("most-recent-success:" + job.data.team_id, new Date().toISOString(), "EX", 60 * 60 * 24);
+                            }
                         } catch (e) {
                             logger.warn("Failed to set most recent success", { error: e });
                         }
