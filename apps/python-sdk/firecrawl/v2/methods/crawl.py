@@ -183,7 +183,7 @@ def get_crawl_status(
         
         # Handle pagination if requested
         auto_paginate = pagination_config.auto_paginate if pagination_config else True
-        if auto_paginate and response_data.get("next"):
+        if auto_paginate and response_data.get("next") and not (pagination_config and pagination_config.max_results is not None and len(documents) >= pagination_config.max_results):
             documents = _fetch_all_pages(
                 client, 
                 response_data.get("next"), 
