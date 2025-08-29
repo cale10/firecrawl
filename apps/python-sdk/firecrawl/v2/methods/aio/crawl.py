@@ -61,14 +61,11 @@ def _prepare_crawl_request(request: CrawlRequest) -> dict:
 
 async def start_crawl(client: AsyncHttpClient, request: CrawlRequest) -> CrawlResponse:
     """
-    Start a crawl job.
-
+    Start a crawl job for a website.
     
     Args:
         client: Async HTTP client instance
         request: CrawlRequest containing URL and options
-        auto_paginate: Whether to automatically fetch all pages
-        pagination_config: Optional configuration for pagination limits
         
     Returns:
         CrawlResponse with job information
@@ -98,11 +95,10 @@ async def get_crawl_status(
     Args:
         client: Async HTTP client instance
         job_id: ID of the crawl job
-        auto_paginate: Whether to automatically fetch all pages
         pagination_config: Optional configuration for pagination limits
         
     Returns:
-        CrawlJob with current status and data
+        CrawlJob with job information
         
     Raises:
         Exception: If the status check fails
@@ -167,14 +163,14 @@ async def _fetch_all_pages_async(
     max_results = pagination_config.max_results if pagination_config else None
     max_wait_time = pagination_config.max_wait_time if pagination_config else None
     
-    start_time = time.time()
+    start_time = time.monotonic()
     
     while current_url:
         # Check pagination limits (treat 0 as a valid limit)
         if (max_pages is not None) and page_count >= max_pages:
             break
 
-        if (max_wait_time is not None) and (time.time() - start_time) > max_wait_time:
+        if (max_wait_time is not None) and (time.monotonic() - start_time) > max_wait_time:
             break
         
         # Fetch next page

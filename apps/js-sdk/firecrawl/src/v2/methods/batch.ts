@@ -144,7 +144,7 @@ async function fetchAllBatchPages(
   pagination?: PaginationConfig
 ): Promise<Document[]> {
   const docs = initial.slice();
-  let current = nextUrl;
+  let current: string | null = nextUrl;
   let pageCount = 0;
   const maxPages = pagination?.maxPages ?? undefined;
   const maxResults = pagination?.maxResults ?? undefined;
@@ -155,15 +155,21 @@ async function fetchAllBatchPages(
     if (maxPages != null && pageCount >= maxPages) break;
     if (maxWaitTime != null && (Date.now() - started) / 1000 > maxWaitTime) break;
 
-    const res = await http.get<{ success: boolean; next?: string | null; data?: Document[] }>(current);
-    if (res.status >= 400 || !res.data?.success) break;
-    const payload = res.data;
+    let payload: { success: boolean; next?: string | null; data?: Document[] } | null = null;
+    try {
+      const res = await http.get<{ success: boolean; next?: string | null; data?: Document[] }>(current);
+      payload = res.data;
+    } catch (err: any) {
+      // axios throws on non-2xx; break pagination loop on fetch error
+      break;
+    }
+    if (!payload?.success) break;
     for (const d of payload.data || []) {
       if (maxResults != null && docs.length >= maxResults) break;
       docs.push(d as Document);
     }
     if (maxResults != null && docs.length >= maxResults) break;
-    current = payload.next ?? null as any;
+    current = (payload.next ?? null) as string | null;
     pageCount += 1;
   }
   return docs;

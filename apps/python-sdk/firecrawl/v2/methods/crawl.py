@@ -232,14 +232,14 @@ def _fetch_all_pages(
     max_results = pagination_config.max_results if pagination_config else None
     max_wait_time = pagination_config.max_wait_time if pagination_config else None
     
-    start_time = time.time()
+    start_time = time.monotonic()
     
     while current_url:
         # Check pagination limits (treat 0 as a valid limit)
-        if max_pages is not None and page_count >= max_pages:
+        if (max_pages is not None) and page_count >= max_pages:
             break
 
-        if max_wait_time is not None and (time.time() - start_time) > max_wait_time:
+        if (max_wait_time is not None) and (time.monotonic() - start_time) > max_wait_time:
             break
         
         # Fetch next page
@@ -324,7 +324,7 @@ def wait_for_crawl_completion(
         Exception: If the job fails
         TimeoutError: If timeout is reached
     """
-    start_time = time.time()
+    start_time = time.monotonic()
     
     while True:
         crawl_job = get_crawl_status(client, job_id)
@@ -334,7 +334,7 @@ def wait_for_crawl_completion(
             return crawl_job
         
         # Check timeout
-        if timeout and (time.time() - start_time) > timeout:
+        if timeout and (time.monotonic() - start_time) > timeout:
             raise TimeoutError(f"Crawl job {job_id} did not complete within {timeout} seconds")
         
         # Wait before next poll

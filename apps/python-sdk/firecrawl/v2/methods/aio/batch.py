@@ -120,14 +120,14 @@ async def _fetch_all_batch_pages_async(
     max_results = pagination_config.max_results if pagination_config else None
     max_wait_time = pagination_config.max_wait_time if pagination_config else None
     
-    start_time = time.time()
+    start_time = time.monotonic()
     
     while current_url:
         # Check pagination limits
         if (max_pages is not None) and (page_count >= max_pages):
             break
             
-        if (max_wait_time is not None) and (time.time() - start_time) > max_wait_time:
+        if (max_wait_time is not None) and (time.monotonic() - start_time) > max_wait_time:
             break
         
         # Fetch next page
