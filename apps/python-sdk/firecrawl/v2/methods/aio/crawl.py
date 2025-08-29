@@ -60,6 +60,21 @@ def _prepare_crawl_request(request: CrawlRequest) -> dict:
 
 
 async def start_crawl(client: AsyncHttpClient, request: CrawlRequest) -> CrawlResponse:
+    """
+    Start a crawl job.
+
+    
+    Args:
+        client: Async HTTP client instance
+        request: CrawlRequest containing URL and options
+        
+    Returns:
+        CrawlResponse with job information
+        
+    Raises:
+        ValueError: If request is invalid
+        Exception: If the crawl operation fails to start
+    """
     payload = _prepare_crawl_request(request)
     response = await client.post("/v2/crawl", payload)
     if response.status_code >= 400:
@@ -196,6 +211,19 @@ async def _fetch_all_pages_async(
 
 
 async def cancel_crawl(client: AsyncHttpClient, job_id: str) -> bool:
+    """
+    Cancel a crawl job.
+    
+    Args:
+        client: Async HTTP client instance
+        job_id: ID of the crawl job
+        
+    Returns:
+        True if cancellation was successful
+        
+    Raises:
+        Exception: If the cancellation operation fails
+    """
     response = await client.delete(f"/v2/crawl/{job_id}")
     if response.status_code >= 400:
         handle_response_error(response, "cancel crawl")
@@ -204,6 +232,20 @@ async def cancel_crawl(client: AsyncHttpClient, job_id: str) -> bool:
 
 
 async def crawl_params_preview(client: AsyncHttpClient, request: CrawlParamsRequest) -> CrawlParamsData:
+    """
+    Preview crawl parameters before starting a crawl job.
+    
+    Args:
+        client: Async HTTP client instance
+        request: CrawlParamsRequest containing URL and prompt
+        
+    Returns:
+        CrawlParamsData containing crawl configuration
+        
+    Raises:
+        ValueError: If request is invalid
+        Exception: If the parameter preview fails
+    """
     if not request.url or not request.url.strip():
         raise ValueError("URL cannot be empty")
     if not request.prompt or not request.prompt.strip():
@@ -242,6 +284,19 @@ async def crawl_params_preview(client: AsyncHttpClient, request: CrawlParamsRequ
 
 
 async def get_crawl_errors(client: AsyncHttpClient, crawl_id: str) -> CrawlErrorsResponse:
+    """
+    Get errors from a crawl job.
+    
+    Args:
+        client: Async HTTP client instance
+        crawl_id: ID of the crawl job
+        
+    Returns:
+        CrawlErrorsResponse with errors and robots blocked
+        
+    Raises:
+        Exception: If the error check operation fails
+    """
     response = await client.get(f"/v2/crawl/{crawl_id}/errors")
     if response.status_code >= 400:
         handle_response_error(response, "check crawl errors")
@@ -255,6 +310,18 @@ async def get_crawl_errors(client: AsyncHttpClient, crawl_id: str) -> CrawlError
 
 
 async def get_active_crawls(client: AsyncHttpClient) -> ActiveCrawlsResponse:
+    """
+    Get active crawl jobs.
+    
+    Args:
+        client: Async HTTP client instance
+        
+    Returns:
+        ActiveCrawlsResponse with active crawl jobs
+        
+    Raises:
+        Exception: If the active crawl jobs operation fails
+    """
     response = await client.get("/v2/crawl/active")
     if response.status_code >= 400:
         handle_response_error(response, "get active crawls")
