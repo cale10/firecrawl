@@ -376,3 +376,11 @@ export class SdkError extends Error {
   }
 }
 
+export interface QueueStatusResponse {
+  success: boolean;
+  jobsInQueue: number;
+  activeJobsInQueue: number;
+  waitingJobsInQueue: number;
+  maxConcurrency: number;
+  mostRecentSuccess: string | null;
+}
