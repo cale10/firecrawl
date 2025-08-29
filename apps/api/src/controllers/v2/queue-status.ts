@@ -1,6 +1,7 @@
 import { RateLimiterMode } from "../../types";
 import { getACUCTeam } from "../auth";
-import { AuthCreditUsageChunkFromTeam, RequestWithAuth } from "./types";
+import { RequestWithAuth } from "./types";
+import { AuthCreditUsageChunkFromTeam } from "../v1/types";
 import { Response } from "express";
 import { redisEvictConnection } from "../../services/redis";
 import { cleanOldConcurrencyLimitedJobs, cleanOldConcurrencyLimitEntries, getConcurrencyLimitActiveJobsCount, getConcurrencyQueueJobsCount } from "../../lib/concurrency-limit";
