@@ -26,7 +26,7 @@ class HttpClient:
             # Different host: keep path/query but force base host/scheme (no token leakage)
             path = ep.path or "/"
             if (ep.hostname or "") != (base.hostname or ""):
-                return urlunparse((base.scheme, base.netloc, path, "", ep.query, ""))
+                return urlunparse((base.scheme or "https", base.netloc, path, "", ep.query, ""))
             # Same host: normalize scheme to base
             return urlunparse((base.scheme or "https", base.netloc, path, "", ep.query, ""))
 
