@@ -43,7 +43,7 @@ class HttpClient:
 
         data['origin'] = f'python-sdk@{version}'
             
-        url = f"{self.api_url}{endpoint}"
+        url = endpoint if endpoint.startswith(("http://", "https://")) else f"{self.api_url}{endpoint}"
         
         last_exception = None
         
@@ -84,7 +84,7 @@ class HttpClient:
         if headers is None:
             headers = self._prepare_headers()
 
-        url = f"{self.api_url}{endpoint}"
+        url = endpoint if endpoint.startswith(("http://", "https://")) else f"{self.api_url}{endpoint}"
         
         last_exception = None
         
@@ -124,7 +124,7 @@ class HttpClient:
         if headers is None:
             headers = self._prepare_headers()
             
-        url = f"{self.api_url}{endpoint}"
+        url = endpoint if endpoint.startswith(("http://", "https://")) else f"{self.api_url}{endpoint}"
         
         last_exception = None
         
