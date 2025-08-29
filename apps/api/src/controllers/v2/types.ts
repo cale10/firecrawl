@@ -104,11 +104,15 @@ function normalizeSchemaForOpenAI(schema: any): any {
     }
     
     if (normalized.type === 'object' && normalized.hasOwnProperty('required') && normalized.hasOwnProperty('properties')) {
-      const validRequired = normalized.required.filter((field: string) => 
-        normalized.properties.hasOwnProperty(field)
-      );
-      if (validRequired.length > 0) {
-        normalized.required = validRequired;
+      if (Array.isArray(normalized.required) && typeof normalized.properties === 'object' && normalized.properties !== null) {
+        const validRequired = normalized.required.filter((field: string) => 
+          normalized.properties.hasOwnProperty(field)
+        );
+        if (validRequired.length > 0) {
+          normalized.required = validRequired;
+        } else {
+          delete normalized.required;
+        }
       } else {
         delete normalized.required;
       }
