@@ -793,6 +793,8 @@ export const crawlRequestSchema = crawlerOptions
 export type CrawlRequest = z.infer<typeof crawlRequestSchema>;
 export type CrawlRequestInput = z.input<typeof crawlRequestSchema>;
 
+export const MAX_MAP_LIMIT = 100000;
+
 // Note: Map types have been transitioned to v2/types.ts while maintaining backwards compatibility
 export const mapRequestSchema = crawlerOptions
   .omit({ ignoreQueryParameters: true })
@@ -805,7 +807,7 @@ export const mapRequestSchema = crawlerOptions
     ignoreQueryParameters: z.boolean().default(true),
     ignoreSitemap: z.boolean().default(false),
     sitemapOnly: z.boolean().default(false),
-    limit: z.number().min(1).max(30000).default(5000),
+    limit: z.number().min(1).max(MAX_MAP_LIMIT).default(5000),
     timeout: z.number().positive().finite().optional(),
     useMock: z.string().optional(),
     filterByPath: z.boolean().default(true),
@@ -1073,6 +1075,7 @@ type Account = {
 
 export type AuthCreditUsageChunk = {
   api_key: string;
+  api_key_id: number;
   team_id: string;
   sub_id: string | null;
   sub_current_period_start: string | null;
@@ -1130,14 +1133,6 @@ export interface RequestWithMaybeACUC<
   acuc?: AuthCreditUsageChunk;
 }
 
-export interface RequestWithACUC<
-  ReqParams = {},
-  ReqBody = undefined,
-  ResBody = undefined,
-> extends Request<ReqParams, ReqBody, ResBody> {
-  acuc: AuthCreditUsageChunk;
-}
-
 export interface RequestWithAuth<
   ReqParams = {},
   ReqBody = undefined,
@@ -1160,7 +1155,7 @@ export interface RequestWithAuth<
   ReqParams = {},
   ReqBody = undefined,
   ResBody = undefined,
-> extends RequestWithACUC<ReqParams, ReqBody, ResBody> {
+> extends RequestWithMaybeACUC<ReqParams, ReqBody, ResBody> {
   auth: AuthObject;
   account?: Account;
 }

@@ -8,7 +8,7 @@ import {
 } from "./types";
 import { scrapeOptions } from "../v2/types";
 import { crawlToCrawler, StoredCrawl } from "../../lib/crawl-redis";
-import { MapResponse, MapRequest } from "./types";
+import { MapResponse, MapRequest, MAX_MAP_LIMIT } from "./types";
 import { configDotenv } from "dotenv";
 import {
   checkAndUpdateURLForMap,
@@ -28,8 +28,6 @@ import { MapTimeoutError } from "../../lib/error";
 configDotenv();
 const redis = new Redis(process.env.REDIS_URL!);
 
-// Max Links that /map can return
-const MAX_MAP_LIMIT = 30000;
 // Max Links that "Smart /map" can return
 const MAX_FIRE_ENGINE_RESULTS = 500;
 
@@ -373,7 +371,7 @@ export async function mapController(
   }
 
   // Bill the team
-  billTeam(req.auth.team_id, req.acuc?.sub_id, 1).catch((error) => {
+  billTeam(req.auth.team_id, req.acuc?.sub_id, 1, req.acuc?.api_key_id ?? null).catch((error) => {
     logger.error(
       `Failed to bill team ${req.auth.team_id} for 1 credit: ${error}`,
     );

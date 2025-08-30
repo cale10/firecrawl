@@ -47,6 +47,7 @@ async function startScrapeJob(
     timeout: number;
     scrapeOptions: ScrapeOptions;
     bypassBilling?: boolean;
+    apiKeyId: number | null;
   },
   logger: Logger,
   flags: TeamFlags,
@@ -85,6 +86,7 @@ async function startScrapeJob(
       is_scrape: options.bypassBilling ?? false,
       startTime: Date.now(),
       zeroDataRetention,
+      apiKeyId: options.apiKeyId,
     },
     {},
     jobId,
@@ -103,6 +105,7 @@ async function scrapeSearchResult(
     timeout: number;
     scrapeOptions: ScrapeOptions;
     bypassBilling?: boolean;
+    apiKeyId: number | null;
   },
   logger: Logger,
   flags: TeamFlags,
@@ -310,6 +313,7 @@ export async function searchController(
         timeout: req.body.timeout,
         scrapeOptions: req.body.scrapeOptions,
         bypassBilling: !isAsyncScraping, // Async mode bills per job, sync mode bills manually
+        apiKeyId: req.acuc?.api_key_id ?? null,
       };
       
       const directToBullMQ = (req.acuc?.price_credits ?? 0) <= 3000;
@@ -474,15 +478,7 @@ export async function searchController(
             const doc = resultsMap.get(item.url);
             return {
               ...item, // Preserve ALL original fields
-              // Override/add scraped content
-              markdown: doc?.markdown,
-              html: doc?.html,
-              rawHtml: doc?.rawHtml,
-              links: doc?.links,
-              screenshot: doc?.screenshot,
-              summary: doc?.summary,
-              metadata: doc?.metadata,
-              json: doc?.json
+              ...doc, // Override/add scraped content
             };
           });
         }
@@ -493,13 +489,7 @@ export async function searchController(
             const doc = item.url ? resultsMap.get(item.url) : undefined;
             return {
               ...item, // Preserve ALL original fields
-              // Add scraped content if available
-              markdown: doc?.markdown,
-              html: doc?.html,
-              rawHtml: doc?.rawHtml,
-              summary: doc?.summary,
-              metadata: doc?.metadata,
-              json: doc?.json
+              ...doc, // Override/add scraped content
             };
           });
         }
@@ -510,13 +500,7 @@ export async function searchController(
             const doc = item.url ? resultsMap.get(item.url) : undefined;
             return {
               ...item, // Preserve ALL original fields
-              // Add scraped content if available
-              markdown: doc?.markdown,
-              html: doc?.html,
-              rawHtml: doc?.rawHtml,
-              summary: doc?.summary,
-              metadata: doc?.metadata,
-              json: doc?.json
+              ...doc, // Override/add scraped content
             };
           });
         }
@@ -550,9 +534,8 @@ export async function searchController(
     // - For async scraping: Jobs handle their own billing
     // - For no scraping: Bill based on search results count
     if (!isSearchPreview && (!shouldScrape || (shouldScrape && !isAsyncScraping))) {
-      billTeam(req.auth.team_id, req.acuc?.sub_id, credits_billed).catch((error) => {
+      billTeam(req.auth.team_id, req.acuc?.sub_id ?? undefined, credits_billed, req.acuc?.api_key_id ?? null).catch((error) => {
         logger.error(`Failed to bill team ${req.acuc?.sub_id} for ${credits_billed} credits: ${error}`);
-        
       });
     }
 

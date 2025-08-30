@@ -9,7 +9,7 @@ import {
   Document as V0Document,
   WebSearchResult,
 } from "../../lib/entities";
-import { agentOptionsExtract, ScrapeOptions as V1ScrapeOptions } from "../v1/types";
+import { agentOptionsExtract, AuthCreditUsageChunk, ScrapeOptions as V1ScrapeOptions } from "../v1/types";
 import type { InternalOptions } from "../../scraper/scrapeURL";
 import { ErrorCodes } from "../../lib/error";
 import Ajv from "ajv";
@@ -648,6 +648,8 @@ export const crawlRequestSchema = crawlerOptions
 export type CrawlRequest = z.infer<typeof crawlRequestSchema>;
 export type CrawlRequestInput = z.input<typeof crawlRequestSchema>;
 
+export const MAX_MAP_LIMIT = 100000;
+
 export const mapRequestSchema = crawlerOptions
   .omit({ sitemap: true, ignoreQueryParameters: true })
   .extend({
@@ -658,7 +660,7 @@ export const mapRequestSchema = crawlerOptions
     ignoreQueryParameters: z.boolean().default(true),
     search: z.string().optional(),
     sitemap: z.enum(["only", "include", "skip"]).default("include"),
-    limit: z.number().min(1).max(30000).default(5000),
+    limit: z.number().min(1).max(MAX_MAP_LIMIT).default(5000),
     timeout: z.number().positive().finite().optional(),
     useMock: z.string().optional(),
     filterByPath: z.boolean().default(true),
@@ -936,44 +938,6 @@ type Account = {
   remainingCredits: number;
 };
 
-export type AuthCreditUsageChunk = {
-  api_key: string;
-  team_id: string;
-  sub_id: string | null;
-  sub_current_period_start: string | null;
-  sub_current_period_end: string | null;
-  sub_user_id: string | null;
-  price_id: string | null;
-  price_credits: number; // credit limit with assoicated price, or free_credits (500) if free plan
-  price_should_be_graceful: boolean;
-  credits_used: number;
-  coupon_credits: number; // do not rely on this number to be up to date after calling a billTeam
-  adjusted_credits_used: number; // credits this period minus coupons used
-  remaining_credits: number;
-  total_credits_sum: number;
-  plan_priority: {
-    bucketLimit: number;
-    planModifier: number;
-  };
-  rate_limits: {
-    crawl: number;
-    scrape: number;
-    search: number;
-    map: number;
-    extract: number;
-    preview: number;
-    crawlStatus: number;
-    extractStatus: number;
-    extractAgentPreview?: number;
-    scrapeAgentPreview?: number;
-  };
-  concurrency: number;
-  flags: TeamFlags;
-
-  // appended on JS-side
-  is_extract?: boolean;
-};
-
 export type TeamFlags = {
   ignoreRobots?: boolean;
   unblockedDomains?: string[];
@@ -985,31 +949,12 @@ export type TeamFlags = {
   crawlTtlHours?: number;
 } | null;
 
-export type AuthCreditUsageChunkFromTeam = Omit<AuthCreditUsageChunk, "api_key">;
-
 export interface RequestWithMaybeACUC<
   ReqParams = {},
   ReqBody = undefined,
   ResBody = undefined,
 > extends Request<ReqParams, ReqBody, ResBody> {
   acuc?: AuthCreditUsageChunk;
-}
-
-export interface RequestWithACUC<
-  ReqParams = {},
-  ReqBody = undefined,
-  ResBody = undefined,
-> extends Request<ReqParams, ReqBody, ResBody> {
-  acuc: AuthCreditUsageChunk;
-}
-
-export interface RequestWithAuth<
-  ReqParams = {},
-  ReqBody = undefined,
-  ResBody = undefined,
-> extends Request<ReqParams, ReqBody, ResBody> {
-  auth: AuthObject;
-  account?: Account;
 }
 
 export interface RequestWithMaybeAuth<
@@ -1025,7 +970,7 @@ export interface RequestWithAuth<
   ReqParams = {},
   ReqBody = undefined,
   ResBody = undefined,
-> extends RequestWithACUC<ReqParams, ReqBody, ResBody> {
+> extends RequestWithMaybeACUC<ReqParams, ReqBody, ResBody> {
   auth: AuthObject;
   account?: Account;
 }
