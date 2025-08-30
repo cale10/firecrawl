@@ -14,6 +14,15 @@ import { getScrapeQueue } from "../../services/queue-service";
 import { fromV1ScrapeOptions } from "../v2/types";
 import { TransportableError } from "../../lib/error";
 
+/**
+ * Scrape a single URL
+ * 
+ * > Note: A new [v2 version of this API](/api-reference/endpoint/scrape) is now available with improved features and performance.
+ * 
+ * @title Scrape
+ * @operationId scrapeAndExtractFromUrl
+ * @tags Scraping
+ */
 export async function scrapeController(
   req: RequestWithAuth<{}, ScrapeResponse, ScrapeRequest>,
   res: Response<ScrapeResponse>,
