@@ -48,7 +48,16 @@ export async function creditUsageHistoricalController(
         }, []);
     }
 
-    periods.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+    periods.sort((a, b) => {
+        const aTime = a.startDate ? Date.parse(a.startDate) : NaN;
+        const bTime = b.startDate ? Date.parse(b.startDate) : NaN;
+        const aNaN = Number.isNaN(aTime);
+        const bNaN = Number.isNaN(bTime);
+        if (aNaN && bNaN) return 0;        // both invalid/null -> keep relative order
+        if (aNaN) return 1;                 // invalid/null goes last
+        if (bNaN) return -1;                // invalid/null goes last
+        return aTime - bTime;               // ascending by valid timestamps
+    });
 
     res.json({
         success: true,

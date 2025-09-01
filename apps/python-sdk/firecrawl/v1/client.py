@@ -765,9 +765,9 @@ class V1FirecrawlApp:
     def get_credit_usage(self) -> V1CreditUsageResponse:
         """Get current credit usage and billing period (v1)."""
         _headers = self._prepare_headers()
-        response = requests.get(
+        response = self._get_request(
             f"{self.api_url}/v1/team/credit-usage",
-            headers=_headers
+            _headers
         )
 
         if response.status_code == 200:
@@ -787,9 +787,9 @@ class V1FirecrawlApp:
     def get_token_usage(self) -> V1TokenUsageResponse:
         """Get current token usage and billing period (v1)."""
         _headers = self._prepare_headers()
-        response = requests.get(
+        response = self._get_request(
             f"{self.api_url}/v1/team/token-usage",
-            headers=_headers
+            _headers
         )
 
         if response.status_code == 200:
@@ -810,7 +810,7 @@ class V1FirecrawlApp:
         """Get historical credit usage (v1)."""
         _headers = self._prepare_headers()
         url = f"{self.api_url}/v1/team/credit-usage/historical" + ("?byApiKey=true" if by_api_key else "")
-        response = requests.get(url, headers=_headers)
+        response = self._get_request(url, _headers)
 
         if response.status_code == 200:
             try:
@@ -830,7 +830,7 @@ class V1FirecrawlApp:
         """Get historical token usage (v1)."""
         _headers = self._prepare_headers()
         url = f"{self.api_url}/v1/team/token-usage/historical" + ("?byApiKey=true" if by_api_key else "")
-        response = requests.get(url, headers=_headers)
+        response = self._get_request(url, _headers)
 
         if response.status_code == 200:
             try:
