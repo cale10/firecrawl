@@ -19,6 +19,7 @@ import type { Response } from "undici";
 import { getPDFMetadata } from "../../../../lib/pdf-parser";
 import { getPdfResultFromCache, savePdfResultToCache } from "../../../../lib/gcs-pdf-cache";
 import { AbortManagerThrownError } from "../../lib/abortManager";
+import { shouldParsePDF, getPDFMaxPages } from "../../../../controllers/v2/types";
 
 type PDFProcessorResult = { html: string; markdown?: string };
 
@@ -29,29 +30,37 @@ async function scrapePDFWithRunPodMU(
   meta: Meta,
   tempFilePath: string,
   base64Content: string,
+  maxPages?: number,
 ): Promise<PDFProcessorResult> {
   meta.logger.debug("Processing PDF document with RunPod MU", {
     tempFilePath,
   });
 
-  try {
-    const cachedResult = await getPdfResultFromCache(base64Content);
-    if (cachedResult) {
-      meta.logger.info("Using cached RunPod MU result for PDF", {
+  if (!maxPages) {
+    try {
+      const cachedResult = await getPdfResultFromCache(base64Content);
+      if (cachedResult) {
+        meta.logger.info("Using cached RunPod MU result for PDF", {
+          tempFilePath,
+        });
+        return cachedResult;
+      }
+    } catch (error) {
+      meta.logger.warn("Error checking PDF cache, proceeding with RunPod MU", {
+        error,
         tempFilePath,
       });
-      return cachedResult;
     }
-  } catch (error) {
-    meta.logger.warn("Error checking PDF cache, proceeding with RunPod MU", {
-      error,
-      tempFilePath,
-    });
   }
 
   meta.abort.throwIfAborted();
 
 
+
+  meta.logger.info("Max Pdf pages", {
+    tempFilePath,
+    maxPages,
+  });
 
   const podStart = await robustFetch({
     url:
@@ -66,6 +75,7 @@ async function scrapePDFWithRunPodMU(
         filename: path.basename(tempFilePath) + ".pdf",
         timeout: meta.abort.scrapeTimeout(),
         created_at: Date.now(),
+        ...(maxPages !== undefined && { max_pages: maxPages }),
       },
     },
     logger: meta.logger.child({
@@ -162,9 +172,10 @@ async function scrapePDFWithParsePDF(
 export async function scrapePDF(
   meta: Meta,
 ): Promise<EngineScrapeResult> {
-  const shouldParsePDF = meta.options.parsers?.includes("pdf") ?? true;
+  const shouldParse = shouldParsePDF(meta.options.parsers);
+  const maxPages = getPDFMaxPages(meta.options.parsers);
   
-  if (!shouldParsePDF) {
+  if (!shouldParse) {
     if (meta.pdfPrefetch !== undefined && meta.pdfPrefetch !== null) {
       const content = (await readFile(meta.pdfPrefetch.filePath)).toString(
         "base64",
@@ -228,11 +239,12 @@ export async function scrapePDF(
   }
 
   const pdfMetadata = await getPDFMetadata(tempFilePath);
+  const effectivePageCount = maxPages ? Math.min(pdfMetadata.numPages, maxPages) : pdfMetadata.numPages;
 
-  if (pdfMetadata.numPages * MILLISECONDS_PER_PAGE > (meta.abort.scrapeTimeout() ?? Infinity)) {
+  if (effectivePageCount * MILLISECONDS_PER_PAGE > (meta.abort.scrapeTimeout() ?? Infinity)) {
     throw new PDFInsufficientTimeError(
-      pdfMetadata.numPages,
-      pdfMetadata.numPages * MILLISECONDS_PER_PAGE + 5000,
+      effectivePageCount,
+      effectivePageCount * MILLISECONDS_PER_PAGE + 5000,
     );
   }
 
@@ -256,6 +268,7 @@ export async function scrapePDF(
         },
         tempFilePath,
         base64Content,
+        maxPages,
       );
     } catch (error) {
       if (
@@ -292,7 +305,12 @@ export async function scrapePDF(
     statusCode: response.status,
     html: result?.html ?? "",
     markdown: result?.markdown ?? "",
-    pdfMetadata,
+    pdfMetadata: {
+      // Rust parser gets the metadata incorrectly, so we overwrite the page count here with the effective page count
+      // TODO: fix this later
+      numPages: effectivePageCount,
+      title: pdfMetadata.title,
+    },
 
     proxyUsed: "basic",
   };

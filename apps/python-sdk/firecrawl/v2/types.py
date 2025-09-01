@@ -278,7 +278,7 @@ class ScrapeOptions(BaseModel):
     timeout: Optional[int] = None
     wait_for: Optional[int] = None
     mobile: Optional[bool] = None
-    parsers: Optional[List[str]] = None
+    parsers: Optional[Union[List[str], List[Union[str, 'PDFParser']]]] = None
     actions: Optional[List[Union['WaitAction', 'ScreenshotAction', 'ClickAction', 'WriteAction', 'PressAction', 'ScrollAction', 'ScrapeAction', 'ExecuteJavascriptAction', 'PDFAction']]] = None
     location: Optional['Location'] = None
     skip_tls_verification: Optional[bool] = None
@@ -544,6 +544,11 @@ class PDFAction(BaseModel):
     landscape: Optional[bool] = None
     scale: Optional[float] = None
 
+class PDFParser(BaseModel):
+    """PDF parser configuration with optional page limit."""
+    type: Literal["pdf"] = "pdf"
+    max_pages: Optional[int] = None
+
 # Location types
 class Location(BaseModel):
     """Location configuration for scraping."""
@@ -601,6 +606,8 @@ class SearchRequest(BaseModel):
                 raise ValueError(f"Invalid category format: {category}")
         
         return normalized_categories
+
+    # NOTE: parsers validation does not belong on SearchRequest; it is part of ScrapeOptions.
 
 class LinkResult(BaseModel):
     """A generic link result with optional metadata (used by search and map)."""
@@ -678,6 +685,13 @@ class ClientConfig(BaseModel):
     timeout: Optional[float] = None
     max_retries: int = 3
     backoff_factor: float = 0.5
+
+class PaginationConfig(BaseModel):
+    """Configuration for pagination behavior."""
+    auto_paginate: bool = True
+    max_pages: Optional[int] = Field(default=None, ge=0)
+    max_results: Optional[int] = Field(default=None, ge=0)
+    max_wait_time: Optional[int] = Field(default=None, ge=0)    # seconds
 
 # Response union types
 AnyResponse = Union[
