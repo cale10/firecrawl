@@ -11,7 +11,7 @@ export class InsecureConnectionError extends Error {
   }
 }
 
-function isIPPrivate(address: string): boolean {
+export function isIPPrivate(address: string): boolean {
   if (!IPAddr.isValid(address)) return false;
 
   const addr = IPAddr.parse(address);
