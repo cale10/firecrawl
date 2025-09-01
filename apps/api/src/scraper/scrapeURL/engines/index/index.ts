@@ -271,22 +271,6 @@ export async function scrapeURLWithIndex(meta: Meta): Promise<EngineScrapeResult
             throw new IndexMissError();
         }
     }
-
-    if (
-        (meta.featureFlags.has("screenshot") || meta.featureFlags.has("screenshot@fullScreen"))
-        && typeof doc.screenshot === "string"
-    ) {
-        const screenshotUrl = new URL(doc.screenshot);
-        const expiresAt = parseInt(screenshotUrl.searchParams.get("Expires") ?? "0", 10) * 1000;
-        if (screenshotUrl.hostname === "storage.googleapis.com" && expiresAt < Date.now()) {
-            meta.logger.info("Re-signing screenshot URL");
-            const [url] = await storage.bucket(process.env.GCS_MEDIA_BUCKET_NAME!).file(decodeURIComponent(screenshotUrl.pathname.split("/")[2])).getSignedUrl({
-                action: "read",
-                expires: Date.now() + 1000 * 60 * 60 * 24 * 7, // 7 days
-            });
-            doc.screenshot = url;
-        }
-    }
     
     return {
         url: doc.url,
