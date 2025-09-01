@@ -1,10 +1,11 @@
+import crypto from "crypto";
 import { Document } from "../../../../controllers/v1/types";
 import { EngineScrapeResult } from "..";
 import { Meta } from "../..";
 import { getIndexFromGCS, hashURL, index_supabase_service, normalizeURLForIndex, saveIndexToGCS, generateURLSplits, addIndexInsertJob, generateDomainSplits, addOMCEJob, addDomainFrequencyJob } from "../../../../services";
 import { EngineError, IndexMissError } from "../../error";
 import { shouldParsePDF } from "../../../../controllers/v2/types";
-import crypto from "crypto";
+import { storage } from "../../../../lib/gcs-jobs";
 
 export async function sendDocumentToIndex(meta: Meta, document: Document) {
     const shouldCache = meta.options.storeInCache
@@ -268,6 +269,22 @@ export async function scrapeURLWithIndex(meta: Meta): Promise<EngineScrapeResult
         if (isPdfUrl) {
             // This is likely a parsed PDF cached, but we want unparsed - report cache miss
             throw new IndexMissError();
+        }
+    }
+
+    if (
+        (meta.featureFlags.has("screenshot") || meta.featureFlags.has("screenshot@fullScreen"))
+        && typeof doc.screenshot === "string"
+    ) {
+        const screenshotUrl = new URL(doc.screenshot);
+        const expiresAt = parseInt(screenshotUrl.searchParams.get("Expires") ?? "0", 10) * 1000;
+        if (screenshotUrl.hostname === "storage.googleapis.com" && expiresAt < Date.now()) {
+            meta.logger.info("Re-signing screenshot URL");
+            const [url] = await storage.bucket(process.env.GCS_MEDIA_BUCKET_NAME!).file(decodeURIComponent(screenshotUrl.pathname.split("/")[2])).getSignedUrl({
+                action: "read",
+                expires: Date.now() + 1000 * 60 * 60 * 24 * 7, // 7 days
+            });
+            doc.screenshot = url;
         }
     }
     
