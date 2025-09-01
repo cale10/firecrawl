@@ -864,7 +864,7 @@ export class WebCrawler {
       }
     }
 
-    if (this.sitemapsHit.size >= 20) {
+    if (this.sitemapsHit.size >= 100) {
       this.logger.warn("Sitemap limit hit!", { crawlId: this.jobId, url: this.baseUrl });
     }
 

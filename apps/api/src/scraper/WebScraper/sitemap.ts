@@ -29,7 +29,7 @@ export async function getLinksFromSitemap(
   abort?: AbortSignal,
   mock?: string,
 ): Promise<number> {
-  if (sitemapsHit.size >= 20) {
+  if (sitemapsHit.size >= 100) {
     return 0;
   }
 
