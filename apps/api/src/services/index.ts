@@ -82,7 +82,10 @@ export async function getIndexFromGCS(url: string, logger?: Logger): Promise<any
             typeof parsed.screenshot === "string"
            ) {
             const screenshotUrl = new URL(parsed.screenshot);
-            const expiresAt = parseInt(screenshotUrl.searchParams.get("Expires") ?? "0", 10) * 1000;
+            let expiresAt = parseInt(screenshotUrl.searchParams.get("Expires") ?? "0", 10) * 1000;
+            if (expiresAt === 0) {
+              expiresAt = new Date(screenshotUrl.searchParams.get("X-Goog-Date") ?? "1970-01-01T00:00:00Z").getTime() + parseInt(screenshotUrl.searchParams.get("X-Goog-Expires") ?? "0", 10) * 1000;
+            }
             if (screenshotUrl.hostname === "storage.googleapis.com" && expiresAt < Date.now()) {
                 logger?.info("Re-signing screenshot URL");
                 const [url] = await storage.bucket(process.env.GCS_MEDIA_BUCKET_NAME!).file(decodeURIComponent(screenshotUrl.pathname.split("/")[2])).getSignedUrl({
