@@ -254,6 +254,10 @@ class AsyncFirecrawlClient:
         from .methods.aio import usage as async_usage  # type: ignore[attr-defined]
         return await async_usage.get_token_usage(self.async_http_client)
 
+    async def get_queue_status(self):
+        from .methods.aio import usage as async_usage  # type: ignore[attr-defined]
+        return await async_usage.get_queue_status(self.async_http_client)
+
     # Watcher (sync object usable from async contexts)
     def watcher(
         self,
