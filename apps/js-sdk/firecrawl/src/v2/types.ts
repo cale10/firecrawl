@@ -144,6 +144,7 @@ export interface ScrapeOptions {
   proxy?: "basic" | "stealth" | "auto" | string;
   maxAge?: number;
   storeInCache?: boolean;
+  integration?: string;
 }
 
 export interface WebhookConfig {
@@ -247,6 +248,7 @@ export interface SearchRequest {
   ignoreInvalidURLs?: boolean;
   timeout?: number; // ms
   scrapeOptions?: ScrapeOptions;
+  integration?: string;
 }
 
 export interface CrawlOptions {
@@ -265,6 +267,7 @@ export interface CrawlOptions {
   webhook?: string | WebhookConfig | null;
   scrapeOptions?: ScrapeOptions | null;
   zeroDataRetention?: boolean;
+  integration?: string;
 }
 
 export interface CrawlResponse {
@@ -283,14 +286,14 @@ export interface CrawlJob {
 }
 
 export interface BatchScrapeOptions {
-  options?: ScrapeOptions;
+  scrapeOptions?: ScrapeOptions;
   webhook?: string | WebhookConfig;
   appendToId?: string;
   ignoreInvalidURLs?: boolean;
   maxConcurrency?: number;
   zeroDataRetention?: boolean;
-  integration?: string;
   idempotencyKey?: string;
+  integration?: string;
 }
 
 export interface BatchScrapeResponse {
@@ -319,6 +322,7 @@ export interface MapOptions {
   includeSubdomains?: boolean;
   limit?: number;
   timeout?: number;
+  integration?: string;
 }
 
 export interface ExtractResponse {

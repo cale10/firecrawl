@@ -15,28 +15,28 @@ export async function startBatchScrape(
   http: HttpClient,
   urls: string[],
   {
-    options,
+    scrapeOptions,
     webhook,
     appendToId,
     ignoreInvalidURLs,
     maxConcurrency,
     zeroDataRetention,
-    integration,
     idempotencyKey,
+    integration,
   }: BatchScrapeOptions = {}
 ): Promise<BatchScrapeResponse> {
   if (!Array.isArray(urls) || urls.length === 0) throw new Error("URLs list cannot be empty");
   const payload: Record<string, unknown> = { urls };
-  if (options) {
-    ensureValidScrapeOptions(options);
-    Object.assign(payload, options);
+  if (scrapeOptions) {
+    ensureValidScrapeOptions(scrapeOptions);
+    Object.assign(payload, scrapeOptions);
   }
   if (webhook != null) payload.webhook = webhook;
   if (appendToId != null) payload.appendToId = appendToId;
   if (ignoreInvalidURLs != null) payload.ignoreInvalidURLs = ignoreInvalidURLs;
   if (maxConcurrency != null) payload.maxConcurrency = maxConcurrency;
   if (zeroDataRetention != null) payload.zeroDataRetention = zeroDataRetention;
-  if (integration != null) payload.integration = integration;
+  if (integration != null) payload.integration = integration.trim();
 
   try {
     const headers = http.prepareHeaders(idempotencyKey);

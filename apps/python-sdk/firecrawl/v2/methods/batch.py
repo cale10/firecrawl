@@ -407,7 +407,7 @@ def prepare_batch_scrape_request(
     if zero_data_retention is not None:
         request_data["zeroDataRetention"] = zero_data_retention
     if integration is not None:
-        request_data["integration"] = integration
+        request_data["integration"] = integration.strip() if isinstance(integration, str) else integration
 
     return request_data
 

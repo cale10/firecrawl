@@ -132,6 +132,7 @@ class AsyncFirecrawlClient:
         limit: Optional[int] = None,
         sitemap: Optional[Literal["only", "include", "skip"]] = None,
         timeout: Optional[int] = None,
+        integration: Optional[str] = None,
     ) -> MapData:
         options = MapOptions(
             search=search,
@@ -139,6 +140,7 @@ class AsyncFirecrawlClient:
             limit=limit,
             sitemap=sitemap if sitemap is not None else "include",
             timeout=timeout,
+            integration=integration,
         ) if any(v is not None for v in [search, include_subdomains, limit, sitemap, timeout]) else None
         return await async_map.map(self.async_http_client, url, options)
 
@@ -161,7 +163,8 @@ class AsyncFirecrawlClient:
         job_id = start.id
         poll_interval = kwargs.get("poll_interval", 2)
         timeout = kwargs.get("timeout")
-        return await self.wait_batch_scrape(job_id, poll_interval=poll_interval, timeout=timeout)
+        integration = kwargs.get("integration")
+        return await self.wait_batch_scrape(job_id, poll_interval=poll_interval, timeout=timeout, integration=integration)
 
     async def get_batch_scrape_status(
         self, 
@@ -196,6 +199,7 @@ class AsyncFirecrawlClient:
         ignore_invalid_urls: Optional[bool] = None,
         poll_interval: int = 2,
         timeout: Optional[int] = None,
+        integration: Optional[str] = None,
     ):
         return await async_extract.extract(
             self.async_http_client,
@@ -210,6 +214,7 @@ class AsyncFirecrawlClient:
             ignore_invalid_urls=ignore_invalid_urls,
             poll_interval=poll_interval,
             timeout=timeout,
+            integration=integration,
         )
 
     async def get_extract_status(self, job_id: str):
