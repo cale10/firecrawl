@@ -39,13 +39,13 @@ jobs:
       PROXY_USERNAME: ${{ matrix.proxy == 'proxy' && secrets.PROXY_USERNAME || '' }}
       PROXY_PASSWORD: ${{ matrix.proxy == 'proxy' && secrets.PROXY_PASSWORD || '' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 10
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "pnpm"
@@ -70,8 +70,8 @@ jobs:
       - name: Build go-html-to-md
         run: |
           go mod tidy
-          go build -o html-to-markdown.so -buildmode=c-shared html-to-markdown.go
-          chmod +x html-to-markdown.so
+          go build -o libhtml-to-markdown.so -buildmode=c-shared html-to-markdown.go
+          chmod +x libhtml-to-markdown.so
         working-directory: ./apps/api/sharedLibs/go-html-to-md
       - name: Build html-transformer
         run: |

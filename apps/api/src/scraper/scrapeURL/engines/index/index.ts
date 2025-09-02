@@ -1,16 +1,24 @@
+import crypto from "crypto";
 import { Document } from "../../../../controllers/v1/types";
 import { EngineScrapeResult } from "..";
 import { Meta } from "../..";
 import { getIndexFromGCS, hashURL, index_supabase_service, normalizeURLForIndex, saveIndexToGCS, generateURLSplits, addIndexInsertJob, generateDomainSplits, addOMCEJob, addDomainFrequencyJob } from "../../../../services";
 import { EngineError, IndexMissError } from "../../error";
-import crypto from "crypto";
+import { shouldParsePDF } from "../../../../controllers/v2/types";
+import { storage } from "../../../../lib/gcs-jobs";
 
 export async function sendDocumentToIndex(meta: Meta, document: Document) {
     const shouldCache = meta.options.storeInCache
         && !meta.internalOptions.zeroDataRetention
         && meta.winnerEngine !== "index"
         && meta.winnerEngine !== "index;documents"
-        && !(meta.winnerEngine === "pdf" && meta.options.parsers?.includes("pdf") === false)
+        && !(meta.winnerEngine === "pdf" && !shouldParsePDF(meta.options.parsers))
+        && !meta.options.parsers?.some(parser => {
+            if (typeof parser === "object" && parser !== null && "maxPages" in parser) {
+                return true;
+            }
+            return false;
+        })
         && (
             meta.internalOptions.teamId === "sitemap"
             || (
@@ -53,7 +61,10 @@ export async function sendDocumentToIndex(meta: Meta, document: Document) {
                     statusCode: document.metadata.statusCode,
                     error: document.metadata.error,
                     screenshot: document.screenshot,
-                    numPages: document.metadata.numPages,
+                    pdfMetadata: document.metadata.numPages !== undefined ? { // reconstruct pdfMetadata from numPages and title
+                        numPages: document.metadata.numPages,
+                        title: document.metadata.title ?? undefined,
+                    } : undefined,
                     contentType: document.metadata.contentType,
                 });
             } catch (error) {
@@ -246,13 +257,13 @@ export async function scrapeURLWithIndex(meta: Meta): Promise<EngineScrapeResult
     const isCachedPdfBase64 = doc.html && doc.html.startsWith("JVBERi");
     
     // If the cached content is base64 PDF but we want parsed PDF (parsePDF:true or default)
-    if (isCachedPdfBase64 && meta.options.parsers?.includes("pdf") !== false) {
+    if (isCachedPdfBase64 && shouldParsePDF(meta.options.parsers)) {
         // Cached content is unparsed PDF, but we want parsed - report cache miss
         throw new IndexMissError();
     }
     
     // If the cached content is NOT base64 PDF but we want unparsed PDF (parsePDF:false)
-    if (!isCachedPdfBase64 && meta.options.parsers?.includes("pdf") === false) {
+    if (!isCachedPdfBase64 && !shouldParsePDF(meta.options.parsers)) {
         // Check if URL looks like a PDF
         const isPdfUrl = meta.url.toLowerCase().endsWith(".pdf") || meta.url.includes(".pdf?");
         if (isPdfUrl) {
@@ -267,7 +278,9 @@ export async function scrapeURLWithIndex(meta: Meta): Promise<EngineScrapeResult
         statusCode: doc.statusCode,
         error: doc.error,
         screenshot: doc.screenshot,
-        numPages: doc.numPages,
+        pdfMetadata: doc.pdfMetadata ?? (doc.numPages !== undefined ? { // backwards-compatible shim of pdfMetadata without title
+            numPages: doc.numPages
+        } : undefined),
         contentType: doc.contentType,
         
         cacheInfo: {

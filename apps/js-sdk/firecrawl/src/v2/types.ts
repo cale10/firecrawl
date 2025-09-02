@@ -133,7 +133,7 @@ export interface ScrapeOptions {
   timeout?: number;
   waitFor?: number;
   mobile?: boolean;
-  parsers?: string[];
+  parsers?: Array<string | { type: "pdf"; maxPages?: number }>;
   actions?: ActionOption[];
   location?: LocationConfig;
   skipTlsVerification?: boolean;
@@ -187,6 +187,18 @@ export interface Document {
   actions?: Record<string, unknown>;
   warning?: string;
   changeTracking?: Record<string, unknown>;
+}
+
+// Pagination configuration for auto-fetching pages from v2 endpoints that return a `next` URL
+export interface PaginationConfig {
+  /** When true (default), automatically follow `next` links and aggregate all documents. */
+  autoPaginate?: boolean;
+  /** Maximum number of additional pages to fetch after the first response. */
+  maxPages?: number;
+  /** Maximum total number of documents to return across all pages. */
+  maxResults?: number;
+  /** Maximum time to spend fetching additional pages (in seconds). */
+  maxWaitTime?: number;
 }
 
 export interface SearchResultWeb {
@@ -327,10 +339,40 @@ export interface ConcurrencyCheck {
 
 export interface CreditUsage {
   remainingCredits: number;
+  planCredits?: number;
+  billingPeriodStart?: string | null;
+  billingPeriodEnd?: string | null;
 }
 
 export interface TokenUsage {
   remainingTokens: number;
+  planTokens?: number;
+  billingPeriodStart?: string | null;
+  billingPeriodEnd?: string | null;
+}
+
+export interface CreditUsageHistoricalPeriod {
+  startDate: string | null;
+  endDate: string | null;
+  apiKey?: string;
+  creditsUsed: number;
+}
+
+export interface CreditUsageHistoricalResponse {
+  success: boolean;
+  periods: CreditUsageHistoricalPeriod[];
+}
+
+export interface TokenUsageHistoricalPeriod {
+  startDate: string | null;
+  endDate: string | null;
+  apiKey?: string;
+  tokensUsed: number;
+}
+
+export interface TokenUsageHistoricalResponse {
+  success: boolean;
+  periods: TokenUsageHistoricalPeriod[];
 }
 
 export interface CrawlErrorsResponse {
@@ -376,3 +418,11 @@ export class SdkError extends Error {
   }
 }
 
+export interface QueueStatusResponse {
+  success: boolean;
+  jobsInQueue: number;
+  activeJobsInQueue: number;
+  waitingJobsInQueue: number;
+  maxConcurrency: number;
+  mostRecentSuccess: string | null;
+}

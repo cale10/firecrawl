@@ -74,6 +74,7 @@ export async function setCachedACUC(
 
 const mockPreviewACUC: (team_id: string, is_extract: boolean) => AuthCreditUsageChunk = (team_id, is_extract) => ({
   api_key: "preview",
+  api_key_id: 0,
   team_id,
   sub_id: null,
   sub_current_period_start: null,
@@ -110,6 +111,7 @@ const mockPreviewACUC: (team_id: string, is_extract: boolean) => AuthCreditUsage
 
 const mockACUC: () => AuthCreditUsageChunk = () => ({
   api_key: "bypass",
+  api_key_id: 0,
   team_id: "bypass",
   sub_id: "bypass",
   sub_current_period_start: new Date().toISOString(),
@@ -185,7 +187,7 @@ export async function getACUC(
       const client =
         Math.random() > (2/3) ? supabase_rr_service : supabase_service;
       ({ data, error } = await client.rpc(
-        "auth_credit_usage_chunk_33",
+        "auth_credit_usage_chunk_34",
         { input_key: api_key, i_is_extract: isExtract, tally_untallied_credits: true },
         { get: true },
       ));
@@ -306,7 +308,7 @@ export async function getACUCTeam(
       const client =
         Math.random() > (2/3) ? supabase_rr_service : supabase_service;
       ({ data, error } = await client.rpc(
-        "auth_credit_usage_chunk_33_from_team",
+        "auth_credit_usage_chunk_34_from_team",
         { input_team: team_id, i_is_extract: isExtract, tally_untallied_credits: true },
         { get: true },
       ));

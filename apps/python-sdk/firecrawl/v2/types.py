@@ -278,7 +278,7 @@ class ScrapeOptions(BaseModel):
     timeout: Optional[int] = None
     wait_for: Optional[int] = None
     mobile: Optional[bool] = None
-    parsers: Optional[List[str]] = None
+    parsers: Optional[Union[List[str], List[Union[str, 'PDFParser']]]] = None
     actions: Optional[List[Union['WaitAction', 'ScreenshotAction', 'ClickAction', 'WriteAction', 'PressAction', 'ScrollAction', 'ScrapeAction', 'ExecuteJavascriptAction', 'PDFAction']]] = None
     location: Optional['Location'] = None
     skip_tls_verification: Optional[bool] = None
@@ -480,10 +480,44 @@ class ConcurrencyCheck(BaseModel):
 class CreditUsage(BaseModel):
     """Remaining credits for the team/API key."""
     remaining_credits: int
+    plan_credits: Optional[int] = None
+    billing_period_start: Optional[str] = None
+    billing_period_end: Optional[str] = None
 
 class TokenUsage(BaseModel):
     """Recent token usage metrics (if available)."""
     remaining_tokens: int
+    plan_tokens: Optional[int] = None
+    billing_period_start: Optional[str] = None
+    billing_period_end: Optional[str] = None
+
+class QueueStatusResponse(BaseModel):
+    """Metrics about the team's scrape queue."""
+    jobs_in_queue: int
+    active_jobs_in_queue: int
+    waiting_jobs_in_queue: int
+    max_concurrency: int
+    most_recent_success: Optional[datetime] = None
+
+class CreditUsageHistoricalPeriod(BaseModel):
+    startDate: Optional[str] = None
+    endDate: Optional[str] = None
+    apiKey: Optional[str] = None
+    creditsUsed: int
+
+class CreditUsageHistoricalResponse(BaseModel):
+    success: bool
+    periods: List[CreditUsageHistoricalPeriod]
+
+class TokenUsageHistoricalPeriod(BaseModel):
+    startDate: Optional[str] = None
+    endDate: Optional[str] = None
+    apiKey: Optional[str] = None
+    tokensUsed: int
+
+class TokenUsageHistoricalResponse(BaseModel):
+    success: bool
+    periods: List[TokenUsageHistoricalPeriod]
 
 # Action types
 class WaitAction(BaseModel):
@@ -535,6 +569,11 @@ class PDFAction(BaseModel):
     format: Optional[Literal["A0", "A1", "A2", "A3", "A4", "A5", "A6", "Letter", "Legal", "Tabloid", "Ledger"]] = None
     landscape: Optional[bool] = None
     scale: Optional[float] = None
+
+class PDFParser(BaseModel):
+    """PDF parser configuration with optional page limit."""
+    type: Literal["pdf"] = "pdf"
+    max_pages: Optional[int] = None
 
 # Location types
 class Location(BaseModel):
@@ -593,6 +632,8 @@ class SearchRequest(BaseModel):
                 raise ValueError(f"Invalid category format: {category}")
         
         return normalized_categories
+
+    # NOTE: parsers validation does not belong on SearchRequest; it is part of ScrapeOptions.
 
 class LinkResult(BaseModel):
     """A generic link result with optional metadata (used by search and map)."""
@@ -670,6 +711,13 @@ class ClientConfig(BaseModel):
     timeout: Optional[float] = None
     max_retries: int = 3
     backoff_factor: float = 0.5
+
+class PaginationConfig(BaseModel):
+    """Configuration for pagination behavior."""
+    auto_paginate: bool = True
+    max_pages: Optional[int] = Field(default=None, ge=0)
+    max_results: Optional[int] = Field(default=None, ge=0)
+    max_wait_time: Optional[int] = Field(default=None, ge=0)    # seconds
 
 # Response union types
 AnyResponse = Union[
