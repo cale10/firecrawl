@@ -123,14 +123,12 @@ const processExtractJobInternal = async (
     await job.extendLock(token, jobLockExtensionTime);
   }, jobLockExtendInterval);
 
-  const sender = job.data.request.webhook
-    ? await createWebhookSender({
-        teamId: job.data.teamId,
-        crawlId: job.data.extractId,
-        v1: false,
-        webhook: job.data.request.webhook as any,
-      })
-    : null;
+  const sender = await createWebhookSender({
+    teamId: job.data.teamId,
+    crawlId: job.data.extractId,
+    v1: false,
+    webhook: job.data.request.webhook as any,
+  });
 
   try {
     if (sender) {

@@ -28,24 +28,24 @@ export async function oldExtract(
   // Means that are in the non-queue system
   // TODO: Remove this once all teams have transitioned to the new system
 
-  if (req.body.webhook) {
-    const sender = await createWebhookSender({
-      teamId: req.auth.team_id,
-      crawlId: extractId,
-      v1: true,
-      webhook: req.body.webhook as any,
-    });
-    if (sender) {
-      const payload: WebhookPayload = {
-        type: WebhookEventType.EXTRACT_STARTED,
-        success: true,
-        data: [],
-        jobId: extractId,
-        metadata: sender.webhookUrl.metadata || undefined,
-      };
-      sender.send(payload);
-    }
+  const sender = await createWebhookSender({
+    teamId: req.auth.team_id,
+    crawlId: extractId,
+    v1: true,
+    webhook: req.body.webhook as any,
+  });
+
+  if (sender) {
+    const payload: WebhookPayload = {
+      type: WebhookEventType.EXTRACT_STARTED,
+      success: true,
+      data: [],
+      jobId: extractId,
+      metadata: sender.webhookUrl.metadata || undefined,
+    };
+    sender.send(payload);
   }
+
   try {
     let result;
     const model = req.body.agent?.model;
@@ -65,57 +65,41 @@ export async function oldExtract(
       });
     }
 
-    if (req.body.webhook) {
-      const sender = await createWebhookSender({
-        teamId: req.auth.team_id,
-        crawlId: extractId,
-        v1: true,
-        webhook: req.body.webhook as any,
-      });
-      if (sender) {
-        if (result.success) {
-          const payload: WebhookPayload = {
-            type: WebhookEventType.EXTRACT_COMPLETED,
-            success: true,
-            data: result,
-            jobId: extractId,
-            metadata: sender.webhookUrl.metadata || undefined,
-          };
-          sender.send(payload);
-        } else {
-          const payload: WebhookPayload = {
-            type: WebhookEventType.EXTRACT_FAILED,
-            success: false,
-            error: result.error ?? "Unknown error",
-            jobId: extractId,
-            metadata: sender.webhookUrl.metadata || undefined,
-            data: [],
-          };
-          sender.send(payload);
-        }
-      }
-    }
-
-    return res.status(200).json(result);
-  } catch (error) {
-    if (req.body.webhook) {
-      const sender = await createWebhookSender({
-        teamId: req.auth.team_id,
-        crawlId: extractId,
-        v1: true,
-        webhook: req.body.webhook as any,
-      });
-      if (sender) {
+    if (sender) {
+      if (result.success) {
+        const payload: WebhookPayload = {
+          type: WebhookEventType.EXTRACT_COMPLETED,
+          success: true,
+          data: result,
+          jobId: extractId,
+          metadata: sender.webhookUrl.metadata || undefined,
+        };
+        sender.send(payload);
+      } else {
         const payload: WebhookPayload = {
           type: WebhookEventType.EXTRACT_FAILED,
           success: false,
-          error: "Internal server error",
+          error: result.error ?? "Unknown error",
           jobId: extractId,
           metadata: sender.webhookUrl.metadata || undefined,
           data: [],
         };
         sender.send(payload);
       }
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    if (sender) {
+      const payload: WebhookPayload = {
+        type: WebhookEventType.EXTRACT_FAILED,
+        success: false,
+        error: "Internal server error",
+        jobId: extractId,
+        metadata: sender.webhookUrl.metadata || undefined,
+        data: [],
+      };
+      sender.send(payload);
     }
 
     return res.status(500).json({
