@@ -436,7 +436,7 @@ async function scrapeURLLoop(meta: Meta): Promise<ScrapeUrlResponse> {
 
     const waitUntilWaterfall =
       getEngineMaxReasonableTime(meta, engine) +
-      parseInt(process.env.SCRAPEURL_ENGINE_WATERFALL_DELAY_MS ?? "0", 10);
+      parseInt(process.env.SCRAPEURL_ENGINE_WATERFALL_DELAY_MS || "0", 10);
 
     if (
       !isFinite(waitUntilWaterfall) ||
