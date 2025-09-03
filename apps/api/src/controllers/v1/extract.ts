@@ -6,7 +6,6 @@ import {
   ExtractResponse,
 } from "./types";
 import { getExtractQueue } from "../../services/queue-service";
-import * as Sentry from "@sentry/node";
 import { saveExtract } from "../../lib/extract/extract-redis";
 import { getTeamIdSyncB } from "../../lib/extract/team-id-sync";
 import { performExtraction } from "../../lib/extract/extraction-service";
@@ -15,7 +14,11 @@ import { BLOCKLISTED_URL_MESSAGE } from "../../lib/strings";
 import { isUrlBlocked } from "../../scraper/WebScraper/utils/blocklist";
 import { logger as _logger } from "../../lib/logger";
 import { fromV1ScrapeOptions } from "../v2/types";
-import { callWebhook } from "../../services/webhook";
+import {
+  createWebhookSender,
+  WebhookEventType,
+  WebhookPayload,
+} from "../../services/webhook";
 
 export async function oldExtract(
   req: RequestWithAuth<{}, ExtractResponse, ExtractRequest>,
@@ -26,16 +29,23 @@ export async function oldExtract(
   // TODO: Remove this once all teams have transitioned to the new system
 
   if (req.body.webhook) {
-    callWebhook({
+    const sender = await createWebhookSender({
       teamId: req.auth.team_id,
       crawlId: extractId,
-      data: {},
-      webhook: req.body.webhook,
       v1: true,
-      eventType: "extract.started",
+      webhook: req.body.webhook as any,
     });
+    if (sender) {
+      const payload: WebhookPayload = {
+        type: WebhookEventType.EXTRACT_STARTED,
+        success: true,
+        data: [],
+        jobId: extractId,
+        metadata: sender.webhookUrl.metadata || undefined,
+      };
+      sender.send(payload);
+    }
   }
-
   try {
     let result;
     const model = req.body.agent?.model;
@@ -56,31 +66,56 @@ export async function oldExtract(
     }
 
     if (req.body.webhook) {
-      const eventType = result.success ? "extract.completed" : "extract.failed";
-      callWebhook({
+      const sender = await createWebhookSender({
         teamId: req.auth.team_id,
         crawlId: extractId,
-        data: result,
-        webhook: req.body.webhook,
         v1: true,
-        eventType,
+        webhook: req.body.webhook as any,
       });
+      if (sender) {
+        if (result.success) {
+          const payload: WebhookPayload = {
+            type: WebhookEventType.EXTRACT_COMPLETED,
+            success: true,
+            data: result,
+            jobId: extractId,
+            metadata: sender.webhookUrl.metadata || undefined,
+          };
+          sender.send(payload);
+        } else {
+          const payload: WebhookPayload = {
+            type: WebhookEventType.EXTRACT_FAILED,
+            success: false,
+            error: result.error ?? "Unknown error",
+            jobId: extractId,
+            metadata: sender.webhookUrl.metadata || undefined,
+            data: [],
+          };
+          sender.send(payload);
+        }
+      }
     }
 
     return res.status(200).json(result);
   } catch (error) {
     if (req.body.webhook) {
-      callWebhook({
+      const sender = await createWebhookSender({
         teamId: req.auth.team_id,
         crawlId: extractId,
-        data: {
+        v1: true,
+        webhook: req.body.webhook as any,
+      });
+      if (sender) {
+        const payload: WebhookPayload = {
+          type: WebhookEventType.EXTRACT_FAILED,
           success: false,
           error: "Internal server error",
-        },
-        webhook: req.body.webhook,
-        v1: true,
-        eventType: "extract.failed",
-      });
+          jobId: extractId,
+          metadata: sender.webhookUrl.metadata || undefined,
+          data: [],
+        };
+        sender.send(payload);
+      }
     }
 
     return res.status(500).json({

@@ -201,15 +201,3 @@ export type ScrapeLog = {
   ipv4_support?: boolean | null;
   ipv6_support?: boolean | null;
 };
-
-export type WebhookEventType =
-  | "crawl.page"
-  | "batch_scrape.page"
-  | "crawl.started"
-  | "batch_scrape.started"
-  | "crawl.completed"
-  | "batch_scrape.completed"
-  | "crawl.failed"
-  | "extract.started"
-  | "extract.completed"
-  | "extract.failed";
