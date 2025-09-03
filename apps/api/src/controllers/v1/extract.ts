@@ -15,6 +15,7 @@ import { BLOCKLISTED_URL_MESSAGE } from "../../lib/strings";
 import { isUrlBlocked } from "../../scraper/WebScraper/utils/blocklist";
 import { logger as _logger } from "../../lib/logger";
 import { fromV1ScrapeOptions } from "../v2/types";
+import { callWebhook } from "../../services/webhook";
 
 export async function oldExtract(
   req: RequestWithAuth<{}, ExtractResponse, ExtractRequest>,
@@ -42,8 +43,34 @@ export async function oldExtract(
       });
     }
 
+    if (req.body.webhook) {
+      const eventType = result.success ? "extract.completed" : "extract.failed";
+      callWebhook({
+        teamId: req.auth.team_id,
+        crawlId: extractId,
+        data: result,
+        webhook: req.body.webhook,
+        v1: true,
+        eventType,
+      });
+    }
+
     return res.status(200).json(result);
   } catch (error) {
+    if (req.body.webhook) {
+      callWebhook({
+        teamId: req.auth.team_id,
+        crawlId: extractId,
+        data: {
+          success: false,
+          error: "Internal server error",
+        },
+        webhook: req.body.webhook,
+        v1: true,
+        eventType: "extract.failed",
+      });
+    }
+
     return res.status(500).json({
       success: false,
       error: "Internal server error",

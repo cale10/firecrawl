@@ -75,6 +75,38 @@ export const url = z.preprocess(
 const strictMessage =
   "Unrecognized key in body -- please review the v2 API documentation for request body changes";
 
+const BLACKLISTED_WEBHOOK_HEADERS = ["x-firecrawl-signature"];
+export const webhookSchema = z.preprocess(
+  x => {
+    if (typeof x === "string") {
+      return { url: x };
+    } else {
+      return x;
+    }
+  },
+  z
+    .object({
+      url: z.string().url(),
+      headers: z.record(z.string(), z.string()).default({}),
+      metadata: z.record(z.string(), z.string()).default({}),
+      events: z
+        .array(z.enum(["completed", "failed", "page", "started"]))
+        .default(["completed", "failed", "page", "started"]),
+    })
+    .strict(strictMessage)
+    .refine(
+      obj => {
+        const blacklistedLower = BLACKLISTED_WEBHOOK_HEADERS.map(h =>
+          h.toLowerCase(),
+        );
+        return !Object.keys(obj.headers).some(key =>
+          blacklistedLower.includes(key.toLowerCase()),
+        );
+      },
+      `The following headers are not allowed: ${BLACKLISTED_WEBHOOK_HEADERS.join(", ")}`,
+    ),
+);
+
 const ACTIONS_MAX_WAIT_TIME = 60;
 const MAX_ACTIONS = 50;
 function calculateTotalWaitTime(
@@ -519,6 +551,7 @@ export const extractOptions = z
       .optional(),
     __experimental_showCostTracking: z.boolean().default(false),
     ignoreInvalidURLs: z.boolean().default(true),
+    webhook: webhookSchema.optional(),
   })
   .strict(strictMessage)
   .refine(obj => obj.urls || obj.prompt, {
@@ -557,38 +590,6 @@ export const scrapeRequestSchema = baseScrapeOptions
 
 export type ScrapeRequest = z.infer<typeof scrapeRequestSchema>;
 export type ScrapeRequestInput = z.input<typeof scrapeRequestSchema>;
-
-const BLACKLISTED_WEBHOOK_HEADERS = ["x-firecrawl-signature"];
-export const webhookSchema = z.preprocess(
-  x => {
-    if (typeof x === "string") {
-      return { url: x };
-    } else {
-      return x;
-    }
-  },
-  z
-    .object({
-      url: z.string().url(),
-      headers: z.record(z.string(), z.string()).default({}),
-      metadata: z.record(z.string(), z.string()).default({}),
-      events: z
-        .array(z.enum(["completed", "failed", "page", "started"]))
-        .default(["completed", "failed", "page", "started"]),
-    })
-    .strict(strictMessage)
-    .refine(
-      obj => {
-        const blacklistedLower = BLACKLISTED_WEBHOOK_HEADERS.map(h =>
-          h.toLowerCase(),
-        );
-        return !Object.keys(obj.headers).some(key =>
-          blacklistedLower.includes(key.toLowerCase()),
-        );
-      },
-      `The following headers are not allowed: ${BLACKLISTED_WEBHOOK_HEADERS.join(", ")}`,
-    ),
-);
 
 export const batchScrapeRequestSchema = baseScrapeOptions
   .extend({
