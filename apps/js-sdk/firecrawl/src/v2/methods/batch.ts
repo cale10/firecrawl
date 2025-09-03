@@ -36,7 +36,7 @@ export async function startBatchScrape(
   if (ignoreInvalidURLs != null) payload.ignoreInvalidURLs = ignoreInvalidURLs;
   if (maxConcurrency != null) payload.maxConcurrency = maxConcurrency;
   if (zeroDataRetention != null) payload.zeroDataRetention = zeroDataRetention;
-  if (integration != null) payload.integration = integration.trim();
+  if (integration != null && integration.trim()) payload.integration = integration.trim();
 
   try {
     const headers = http.prepareHeaders(idempotencyKey);
