@@ -120,6 +120,17 @@ const processExtractJobInternal = async (
   }, jobLockExtendInterval);
 
   try {
+    if (job.data.request.webhook) {
+      callWebhook({
+        teamId: job.data.teamId,
+        crawlId: job.data.extractId,
+        data: {},
+        webhook: job.data.request.webhook,
+        v1: true,
+        eventType: "extract.started",
+      });
+    }
+
     let result: ExtractResult | null = null;
 
     const model = job.data.request.agent?.model;

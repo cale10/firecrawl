@@ -24,6 +24,18 @@ export async function oldExtract(
 ) {
   // Means that are in the non-queue system
   // TODO: Remove this once all teams have transitioned to the new system
+
+  if (req.body.webhook) {
+    callWebhook({
+      teamId: req.auth.team_id,
+      crawlId: extractId,
+      data: {},
+      webhook: req.body.webhook,
+      v1: true,
+      eventType: "extract.started",
+    });
+  }
+
   try {
     let result;
     const model = req.body.agent?.model;

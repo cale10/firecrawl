@@ -231,6 +231,8 @@ export const callWebhook = async ({
           });
         }
       }
+    } else if (eventType === "extract.completed") {
+      dataToSend.push(data);
     }
 
     const payload = {
