@@ -41,7 +41,7 @@ def _prepare_extract_request(
         if prepared:
             body["scrapeOptions"] = prepared
     if integration is not None:
-        body["integration"] = integration.strip()
+        body["integration"] = str(integration).strip()
     return body
 
 
