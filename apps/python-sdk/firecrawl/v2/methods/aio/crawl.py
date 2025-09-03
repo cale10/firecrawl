@@ -56,7 +56,7 @@ def _prepare_crawl_request(request: CrawlRequest) -> dict:
         if snake in request_data:
             data[camel] = request_data.pop(snake)
     data.update(request_data)
-    if getattr(request, "integration", None):
+    if getattr(request, "integration", None) is not None:
         data["integration"] = str(getattr(request, "integration")).strip()
     return data
 
