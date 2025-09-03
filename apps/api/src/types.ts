@@ -3,13 +3,13 @@ import {
   BaseScrapeOptions,
   ScrapeOptions,
   Document as V2Document,
-  webhookSchema,
   TeamFlags,
 } from "./controllers/v2/types";
 import { AuthCreditUsageChunk } from "./controllers/v1/types";
 import { ExtractorOptions, Document } from "./lib/entities";
 import { InternalOptions } from "./scraper/scrapeURL";
 import type { CostTracking } from "./lib/cost-tracking";
+import { webhookSchema } from "./services/webhook/schema";
 
 type Mode = "crawl" | "single_urls" | "sitemap" | "kickoff";
 
