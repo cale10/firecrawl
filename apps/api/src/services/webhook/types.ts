@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { webhookSchema } from "./schema";
+import { ExtractResult } from "../../lib/extract/extraction-service";
 
 export enum WebhookEvent {
   CRAWL_STARTED = "crawl.started",
@@ -74,13 +75,13 @@ export interface BatchScrapeStartedData extends BaseWebhookData {
 
 export interface BatchScrapePageData extends BaseWebhookData {
   success: boolean;
-  data: any;
+  data: WebhookDocument[];
   error?: string; // more v0 tomfoolery
 }
 
 export interface BatchScrapeCompletedData extends BaseWebhookData {
   success: true;
-  data: any;
+  data: WebhookDocumentLink[];
 }
 
 // extract
@@ -90,7 +91,7 @@ export interface ExtractStartedData extends BaseWebhookData {
 
 export interface ExtractCompletedData extends BaseWebhookData {
   success: true;
-  data: any;
+  data: ExtractResult[];
 }
 
 export interface ExtractFailedData extends BaseWebhookData {

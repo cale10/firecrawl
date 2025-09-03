@@ -168,7 +168,7 @@ const processExtractJobInternal = async (
       if (sender) {
         sender.send(WebhookEvent.EXTRACT_COMPLETED, {
           success: true,
-          data: result,
+          data: [result],
         });
       }
 

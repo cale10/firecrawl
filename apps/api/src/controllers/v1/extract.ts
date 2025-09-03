@@ -58,7 +58,7 @@ export async function oldExtract(
       if (result.success) {
         sender.send(WebhookEvent.EXTRACT_COMPLETED, {
           success: true,
-          data: result,
+          data: [result],
         });
       } else {
         sender.send(WebhookEvent.EXTRACT_FAILED, {
