@@ -231,6 +231,7 @@ class AsyncFirecrawlClient:
         show_sources: Optional[bool] = None,
         scrape_options: Optional['ScrapeOptions'] = None,
         ignore_invalid_urls: Optional[bool] = None,
+        integration: Optional[str] = None,
     ):
         return await async_extract.start_extract(
             self.async_http_client,
@@ -243,6 +244,7 @@ class AsyncFirecrawlClient:
             show_sources=show_sources,
             scrape_options=scrape_options,
             ignore_invalid_urls=ignore_invalid_urls,
+            integration=integration,
         )
 
     # Usage endpoints
