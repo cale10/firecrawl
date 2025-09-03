@@ -32,7 +32,7 @@ export async function oldExtract(
     teamId: req.auth.team_id,
     crawlId: extractId,
     v1: true,
-    webhook: req.body.webhook as any,
+    webhook: req.body.webhook,
   });
 
   if (sender) {

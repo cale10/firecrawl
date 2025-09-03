@@ -198,7 +198,7 @@ export async function batchScrapeController(
       teamId: req.auth.team_id,
       crawlId: id,
       v1: true,
-      webhook: req.body.webhook as any,
+      webhook: req.body.webhook,
     });
     if (sender) {
       const payload: WebhookPayload = {
