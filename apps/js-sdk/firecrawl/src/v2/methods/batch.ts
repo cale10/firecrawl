@@ -15,7 +15,7 @@ export async function startBatchScrape(
   http: HttpClient,
   urls: string[],
   {
-    scrapeOptions,
+    options,
     webhook,
     appendToId,
     ignoreInvalidURLs,
@@ -27,9 +27,9 @@ export async function startBatchScrape(
 ): Promise<BatchScrapeResponse> {
   if (!Array.isArray(urls) || urls.length === 0) throw new Error("URLs list cannot be empty");
   const payload: Record<string, unknown> = { urls };
-  if (scrapeOptions) {
-    ensureValidScrapeOptions(scrapeOptions);
-    Object.assign(payload, scrapeOptions);
+  if (options) {
+    ensureValidScrapeOptions(options);
+    Object.assign(payload, options);
   }
   if (webhook != null) payload.webhook = webhook;
   if (appendToId != null) payload.appendToId = appendToId;

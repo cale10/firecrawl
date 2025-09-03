@@ -141,7 +141,7 @@ class AsyncFirecrawlClient:
             sitemap=sitemap if sitemap is not None else "include",
             timeout=timeout,
             integration=integration,
-        ) if any(v is not None for v in [search, include_subdomains, limit, sitemap, timeout]) else None
+        ) if any(v is not None for v in [search, include_subdomains, limit, sitemap, integration, timeout]) else None
         return await async_map.map(self.async_http_client, url, options)
 
     async def start_batch_scrape(self, urls: List[str], **kwargs) -> Any:

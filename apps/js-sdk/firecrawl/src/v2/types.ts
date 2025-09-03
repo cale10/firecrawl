@@ -286,7 +286,7 @@ export interface CrawlJob {
 }
 
 export interface BatchScrapeOptions {
-  scrapeOptions?: ScrapeOptions;
+  options?: ScrapeOptions;
   webhook?: string | WebhookConfig;
   appendToId?: string;
   ignoreInvalidURLs?: boolean;
