@@ -163,8 +163,7 @@ class AsyncFirecrawlClient:
         job_id = start.id
         poll_interval = kwargs.get("poll_interval", 2)
         timeout = kwargs.get("timeout")
-        integration = kwargs.get("integration")
-        return await self.wait_batch_scrape(job_id, poll_interval=poll_interval, timeout=timeout, integration=integration)
+        return await self.wait_batch_scrape(job_id, poll_interval=poll_interval, timeout=timeout)
 
     async def get_batch_scrape_status(
         self, 
