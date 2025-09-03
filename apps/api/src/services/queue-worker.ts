@@ -123,16 +123,25 @@ const processExtractJobInternal = async (
     await job.extendLock(token, jobLockExtensionTime);
   }, jobLockExtendInterval);
 
-  try {
-    if (job.data.request.webhook) {
-      callWebhook({
+  const sender = job.data.request.webhook
+    ? await createWebhookSender({
         teamId: job.data.teamId,
         crawlId: job.data.extractId,
-        data: {},
-        webhook: job.data.request.webhook,
-        v1: true,
-        eventType: "extract.started",
-      });
+        v1: false,
+        webhook: job.data.request.webhook as any,
+      })
+    : null;
+
+  try {
+    if (sender) {
+      const payload: WebhookPayload = {
+        type: WebhookEventType.EXTRACT_STARTED,
+        success: true,
+        data: [],
+        jobId: job.data.extractId,
+        metadata: sender.webhookUrl.metadata || undefined,
+      };
+      sender.send(payload);
     }
 
     let result: ExtractResult | null = null;
@@ -167,23 +176,15 @@ const processExtractJobInternal = async (
       // Move job to completed state in Redis
       await job.moveToCompleted(result, token, false);
 
-      if (job.data.request.webhook) {
-        const sender = await createWebhookSender({
-          teamId: job.data.teamId,
-          crawlId: job.data.extractId,
-          v1: false,
-          webhook: job.data.request.webhook as any,
-        });
-        if (sender) {
-          const payload: WebhookPayload = {
-            type: WebhookEventType.EXTRACT_COMPLETED,
-            success: true,
-            data: result,
-            jobId: job.data.extractId,
-            metadata: sender.webhookUrl.metadata || undefined,
-          };
-          sender.send(payload);
-        }
+      if (sender) {
+        const payload: WebhookPayload = {
+          type: WebhookEventType.EXTRACT_COMPLETED,
+          success: true,
+          data: result,
+          jobId: job.data.extractId,
+          metadata: sender.webhookUrl.metadata || undefined,
+        };
+        sender.send(payload);
       }
 
       return result;
@@ -199,24 +200,16 @@ const processExtractJobInternal = async (
             job.data.extractId,
       });
 
-      if (job.data.request.webhook) {
-        const sender = await createWebhookSender({
-          teamId: job.data.teamId,
-          crawlId: job.data.extractId,
-          v1: false,
-          webhook: job.data.request.webhook as any,
-        });
-        if (sender) {
-          const payload: WebhookPayload = {
-            type: WebhookEventType.EXTRACT_FAILED,
-            success: false,
-            error: result?.error ?? "Unknown error",
-            jobId: job.data.extractId,
-            metadata: sender.webhookUrl.metadata || undefined,
-            data: [],
-          };
-          sender.send(payload);
-        }
+      if (sender) {
+        const payload: WebhookPayload = {
+          type: WebhookEventType.EXTRACT_FAILED,
+          success: false,
+          error: result?.error ?? "Unknown error",
+          jobId: job.data.extractId,
+          metadata: sender.webhookUrl.metadata || undefined,
+          data: [],
+        };
+        sender.send(payload);
       }
 
       return result;
@@ -246,27 +239,19 @@ const processExtractJobInternal = async (
           job.data.extractId,
     });
 
-    if (job.data.request.webhook) {
-      const sender = await createWebhookSender({
-        teamId: job.data.teamId,
-        crawlId: job.data.extractId,
-        v1: false,
-        webhook: job.data.request.webhook as any,
-      });
-      if (sender) {
-        const payload: WebhookPayload = {
-          type: WebhookEventType.EXTRACT_FAILED,
-          success: false,
-          error:
-            (error as any)?.message ??
-            "Unknown error, please contact help@firecrawl.com. Extract id: " +
-              job.data.extractId,
-          jobId: job.data.extractId,
-          metadata: sender.webhookUrl.metadata || undefined,
-          data: [],
-        };
-        sender.send(payload);
-      }
+    if (job.data.request.webhook && sender) {
+      const payload: WebhookPayload = {
+        type: WebhookEventType.EXTRACT_FAILED,
+        success: false,
+        error:
+          (error as any)?.message ??
+          "Unknown error, please contact help@firecrawl.com. Extract id: " +
+            job.data.extractId,
+        jobId: job.data.extractId,
+        metadata: sender.webhookUrl.metadata || undefined,
+        data: [],
+      };
+      sender.send(payload);
     }
 
     return {
