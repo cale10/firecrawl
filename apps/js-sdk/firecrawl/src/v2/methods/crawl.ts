@@ -12,6 +12,7 @@ import { ensureValidScrapeOptions } from "../utils/validation";
 import { normalizeAxiosError, throwForBadResponse } from "../utils/errorHandler";
 import type { HttpClient as _Http } from "../utils/httpClient";
 import { fetchAllPages } from "../utils/pagination";
+import { normalizeDocumentInput } from "../utils/normalize";
 
 export type CrawlRequest = CrawlOptions & {
   url: string;
@@ -67,7 +68,7 @@ export async function getCrawlStatus(
       throwForBadResponse(res, "get crawl status");
     }
     const body = res.data;
-    const initialDocs = (body.data || []) as Document[];
+    const initialDocs = (body.data || []).map((doc: any) => normalizeDocumentInput(doc));
 
     const auto = pagination?.autoPaginate ?? true;
     if (!auto || !body.next) {

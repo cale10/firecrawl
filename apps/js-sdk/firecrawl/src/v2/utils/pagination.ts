@@ -1,5 +1,6 @@
 import type { HttpClient } from "../utils/httpClient";
 import type { Document, PaginationConfig } from "../types";
+import { normalizeDocumentInput } from "./normalize";
 
 /**
  * Shared helper to follow `next` cursors and aggregate documents with limits.
@@ -33,7 +34,7 @@ export async function fetchAllPages(
 
     for (const d of payload.data || []) {
       if (maxResults != null && docs.length >= maxResults) break;
-      docs.push(d as Document);
+      docs.push(normalizeDocumentInput(d));
     }
     if (maxResults != null && docs.length >= maxResults) break;
     current = (payload.next ?? null) as string | null;

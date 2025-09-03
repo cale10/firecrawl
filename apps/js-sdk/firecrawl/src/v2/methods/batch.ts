@@ -10,6 +10,7 @@ import { HttpClient } from "../utils/httpClient";
 import { ensureValidScrapeOptions } from "../utils/validation";
 import { fetchAllPages } from "../utils/pagination";
 import { normalizeAxiosError, throwForBadResponse } from "../utils/errorHandler";
+import { normalizeDocumentInput } from "../utils/normalize";
 
 export async function startBatchScrape(
   http: HttpClient,
@@ -58,7 +59,7 @@ export async function getBatchScrapeStatus(
     const res = await http.get<{ success: boolean; status: BatchScrapeJob["status"]; completed?: number; total?: number; creditsUsed?: number; expiresAt?: string; next?: string | null; data?: Document[] }>(`/v2/batch/scrape/${jobId}`);
     if (res.status !== 200 || !res.data?.success) throwForBadResponse(res, "get batch scrape status");
     const body = res.data;
-    const initialDocs = (body.data || []) as Document[];
+    const initialDocs = (body.data || []).map((doc: any) => normalizeDocumentInput(doc));
     const auto = pagination?.autoPaginate ?? true;
     if (!auto || !body.next) {
       return {

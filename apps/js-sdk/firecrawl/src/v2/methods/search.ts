@@ -2,6 +2,7 @@ import { type Document, type SearchData, type SearchRequest, type SearchResultWe
 import { HttpClient } from "../utils/httpClient";
 import { ensureValidScrapeOptions } from "../utils/validation";
 import { throwForBadResponse, normalizeAxiosError } from "../utils/errorHandler";
+import { normalizeDocumentInput } from "../utils/normalize";
 
 function prepareSearchPayload(req: SearchRequest): Record<string, unknown> {
   if (!req.query || !req.query.trim()) throw new Error("Query cannot be empty");
@@ -39,7 +40,7 @@ function transformArray<ResultType>(arr: any[]): Array<ResultType | Document> {
         "summary" in item ||
         "json" in item
       ) {
-        results.push(item as Document);
+        results.push(normalizeDocumentInput(item) as Document);
       } else {
         results.push(item as ResultType);
       }

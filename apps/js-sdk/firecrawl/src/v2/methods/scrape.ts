@@ -2,6 +2,7 @@ import { type Document, type ScrapeOptions } from "../types";
 import { HttpClient } from "../utils/httpClient";
 import { ensureValidScrapeOptions } from "../utils/validation";
 import { throwForBadResponse, normalizeAxiosError } from "../utils/errorHandler";
+import { normalizeDocumentInput } from "../utils/normalize";
 
 export async function scrape(http: HttpClient, url: string, options?: ScrapeOptions): Promise<Document> {
   if (!url || !url.trim()) {
@@ -17,7 +18,7 @@ export async function scrape(http: HttpClient, url: string, options?: ScrapeOpti
     if (res.status !== 200 || !res.data?.success) {
       throwForBadResponse(res, "scrape");
     }
-    return (res.data.data || {}) as Document;
+    return normalizeDocumentInput(res.data.data || {});
   } catch (err: any) {
     if (err?.isAxiosError) return normalizeAxiosError(err, "scrape");
     throw err;
