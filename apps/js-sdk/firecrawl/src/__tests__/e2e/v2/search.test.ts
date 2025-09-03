@@ -147,6 +147,7 @@ describe("v2.search e2e", () => {
         proxy: "basic",
         maxAge: 3_600_000,
         storeInCache: true,
+        fastMode: false,
         location: { country: "US", languages: ["en"] },
         actions: [{ type: "wait", milliseconds: 1000 }],
       },

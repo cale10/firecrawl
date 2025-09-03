@@ -50,6 +50,7 @@ describe("v2.batch e2e", () => {
         ],
         onlyMainContent: true,
         mobile: false,
+        fastMode: false,
       },
       ignoreInvalidURLs: true,
       maxConcurrency: 2,

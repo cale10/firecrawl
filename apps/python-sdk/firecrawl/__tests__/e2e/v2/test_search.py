@@ -167,6 +167,7 @@ def test_search_all_parameters():
             proxy="basic",
             max_age=3600000,  # 1 hour cache
             store_in_cache=True,
+            fast_mode=False,
             location=Location(
                 country="US",
                 languages=["en"]

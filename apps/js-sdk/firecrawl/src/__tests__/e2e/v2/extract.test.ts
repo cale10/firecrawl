@@ -66,5 +66,46 @@ describe("v2.extract e2e", () => {
       expect(schema.safeParse(resp.data).success).toBe(true);
     }
   }, 180_000);
+
+  test("extract with all scrapeOptions parameters", async () => {
+    const schema = {
+      type: "object",
+      properties: { title: { type: "string" } },
+      required: ["title"],
+    } as const;
+    const resp = await client.extract({
+      urls: ["https://docs.firecrawl.dev"],
+      prompt: "Extract the main page title",
+      schema: schema,
+      systemPrompt: "You are a helpful assistant",
+      allowExternalLinks: false,
+      enableWebSearch: false,
+      showSources: true,
+      ignoreInvalidURLs: true,
+      scrapeOptions: {
+        formats: [
+          "markdown",
+          "rawHtml",
+          { type: "json", prompt: "Extract title", schema },
+        ],
+        onlyMainContent: true,
+        mobile: false,
+        skipTlsVerification: false,
+        removeBase64Images: true,
+        blockAds: true,
+        proxy: "auto",
+        storeInCache: true,
+        maxAge: 1000,
+        fastMode: false,
+      },
+    });
+    expect(typeof resp.success === "boolean" || resp.success == null).toBe(true);
+    if ((resp as any).sources != null) {
+      expect(typeof (resp as any).sources).toBe("object");
+    }
+    if (resp.data != null) {
+      expect(typeof resp.data).toBe("object");
+    }
+  }, 240_000);
 });
 

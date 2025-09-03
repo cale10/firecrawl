@@ -71,6 +71,7 @@ class TestBatchScrapeE2E:
             ],
             only_main_content=True,
             mobile=False,
+            fast_mode=False,
         )
 
         job = self.client.batch_scrape(

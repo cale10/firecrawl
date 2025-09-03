@@ -58,6 +58,7 @@ async def test_async_batch_wait_with_all_params():
         ],
         only_main_content=True,
         mobile=False,
+        fast_mode=False,
         ignore_invalid_urls=True,
         max_concurrency=2,
         zero_data_retention=False,
