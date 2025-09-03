@@ -210,5 +210,6 @@ export type WebhookEventType =
   | "crawl.completed"
   | "batch_scrape.completed"
   | "crawl.failed"
+  | "extract.started"
   | "extract.completed"
   | "extract.failed";
