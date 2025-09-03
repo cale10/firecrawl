@@ -238,7 +238,8 @@ class TestCrawlE2E:
             wait_for=2000,
             mobile=True,
             skip_tls_verification=True,
-            remove_base64_images=False
+            remove_base64_images=False,
+            fast_mode=False
         )
         
         crawl_job = self.client.start_crawl(

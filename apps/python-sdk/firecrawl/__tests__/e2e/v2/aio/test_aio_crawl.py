@@ -66,6 +66,7 @@ async def test_async_crawl_with_all_params():
             wait_for=500,
             skip_tls_verification=False,
             remove_base64_images=False,
+            fast_mode=False,
         ),
         zero_data_retention=False,
         poll_interval=2,

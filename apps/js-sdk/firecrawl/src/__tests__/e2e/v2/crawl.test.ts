@@ -166,6 +166,7 @@ describe("v2.crawl e2e", () => {
         mobile: true,
         skipTlsVerification: true,
         removeBase64Images: false,
+        fastMode: false,
       },
       zeroDataRetention: false,
     });

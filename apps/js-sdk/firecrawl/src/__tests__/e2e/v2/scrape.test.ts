@@ -65,6 +65,7 @@ describe("v2.scrape e2e", () => {
       mobile: false,
       skipTlsVerification: false,
       removeBase64Images: true,
+      fastMode: false,
       blockAds: true,
       proxy: "auto",
       storeInCache: true,
