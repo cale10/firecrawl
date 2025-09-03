@@ -33,6 +33,7 @@ import { performDeepResearch } from "../lib/deep-research/deep-research-service"
 import { performGenerateLlmsTxt } from "../lib/generate-llmstxt/generate-llmstxt-service";
 import { updateGeneratedLlmsTxt } from "../lib/generate-llmstxt/generate-llmstxt-redis";
 import { performExtraction_F0 } from "../lib/extract/fire-0/extraction-service-f0";
+import { callWebhook } from "./webhook";
 import Express from "express";
 import http from "http";
 import https from "https";
@@ -150,6 +151,18 @@ const processExtractJobInternal = async (
     if (result && result.success) {
       // Move job to completed state in Redis
       await job.moveToCompleted(result, token, false);
+
+      if (job.data.request.webhook) {
+        callWebhook({
+          teamId: job.data.teamId,
+          crawlId: job.data.extractId,
+          data: result,
+          webhook: job.data.request.webhook,
+          v1: false,
+          eventType: "extract.completed",
+        });
+      }
+
       return result;
     } else {
       // throw new Error(result.error || "Unknown error during extraction");
@@ -162,6 +175,19 @@ const processExtractJobInternal = async (
           "Unknown error, please contact help@firecrawl.com. Extract id: " +
             job.data.extractId,
       });
+
+      if (job.data.request.webhook) {
+        callWebhook({
+          teamId: job.data.teamId,
+          crawlId: job.data.extractId,
+          data: {
+            error: result?.error ?? "Unknown error",
+          },
+          webhook: job.data.request.webhook,
+          v1: false,
+          eventType: "extract.failed",
+        });
+      }
 
       return result;
     }
@@ -189,6 +215,23 @@ const processExtractJobInternal = async (
         "Unknown error, please contact help@firecrawl.com. Extract id: " +
           job.data.extractId,
     });
+
+    if (job.data.request.webhook) {
+      callWebhook({
+        teamId: job.data.teamId,
+        crawlId: job.data.extractId,
+        data: {
+          error:
+            error.message ??
+            "Unknown error, please contact help@firecrawl.com. Extract id: " +
+              job.data.extractId,
+        },
+        webhook: job.data.request.webhook,
+        v1: false,
+        eventType: "extract.failed",
+      });
+    }
+
     return {
       success: false,
       error:
