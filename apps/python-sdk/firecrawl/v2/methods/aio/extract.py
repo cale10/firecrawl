@@ -40,7 +40,7 @@ def _prepare_extract_request(
         prepared = prepare_scrape_options(scrape_options)
         if prepared:
             body["scrapeOptions"] = prepared
-    if integration is not None:
+    if integration is not None and str(integration).strip():
         body["integration"] = str(integration).strip()
     return body
 
