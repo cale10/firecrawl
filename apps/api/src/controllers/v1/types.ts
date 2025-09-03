@@ -12,23 +12,7 @@ import { InternalOptions } from "../../scraper/scrapeURL";
 import { getURLDepth } from "../../scraper/WebScraper/utils/maxDepthUtils";
 import Ajv from "ajv";
 import { ErrorCodes } from "../../lib/error";
-import { integrationSchema } from "../v2/types";
-
-export enum IntegrationEnum {
-  DIFY = "dify",
-  ZAPIER = "zapier",
-  PIPEDREAM = "pipedream",
-  RAYCAST = "raycast",
-  LANGCHAIN = "langchain",
-  CREWAI = "crewai",
-  LLAMAINDEX = "llamaindex",
-  N8N = "n8n",
-  CAMELAI = "camelai",
-  MAKE = "make",
-  FLOWISE = "flowise",
-  METAGPT = "metagpt",
-  RELEVANCEAI = "relevanceai",
-}
+import { integrationSchema } from "../../utils/integration";
 
 export type Format =
   | "markdown"
@@ -840,10 +824,7 @@ export const mapRequestSchema = crawlerOptions
   .extend({
     url,
     origin: z.string().optional().default("api"),
-    integration: z
-      .nativeEnum(IntegrationEnum)
-      .optional()
-      .transform(val => val || null),
+    integration: integrationSchema.optional().transform(val => val || null),
     includeSubdomains: z.boolean().default(true),
     search: z.string().optional(),
     ignoreQueryParameters: z.boolean().default(true),
@@ -1417,10 +1398,7 @@ export const searchRequestSchema = z
     country: z.string().optional().default("us"),
     location: z.string().optional(),
     origin: z.string().optional().default("api"),
-    integration: z
-      .nativeEnum(IntegrationEnum)
-      .optional()
-      .transform(val => val || null),
+    integration: integrationSchema.optional().transform(val => val || null),
     timeout: z.number().int().positive().finite().safe().default(60000),
     ignoreInvalidURLs: z.boolean().optional().default(false),
     __searchPreviewToken: z.string().optional(),
