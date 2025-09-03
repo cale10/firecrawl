@@ -616,10 +616,18 @@ app.listen(workerPort, () => {
   });
   scrapeQueueEvents.on("failed", failedListener);
 
+  // hack: detect if we're running with tsx
+  const isUsingTsx = process.execArgv.some(
+    arg => arg.includes("tsx") && arg.includes("loader"),
+  );
   const results = await Promise.all([
     separateWorkerFun(
       getScrapeQueue(),
-      path.join(__dirname, "worker", "scrape-worker.js"),
+      path.join(
+        __dirname,
+        "worker",
+        `scrape-worker.${isUsingTsx ? "ts" : "js"}`,
+      ),
     ),
     workerFun(getExtractQueue(), processExtractJobInternal),
     workerFun(getDeepResearchQueue(), processDeepResearchJobInternal),
