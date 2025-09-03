@@ -169,7 +169,7 @@ class TestCrawlE2E:
             max_discovery_depth=2,
             poll_interval=1,
             timeout=120,
-            integration="e2e-test",
+            integration="_e2e-test",
         )
         
         assert crawl_job.status in ["completed", "failed"]
@@ -259,7 +259,7 @@ class TestCrawlE2E:
             webhook="https://example.com/hook",
             scrape_options=scrape_opts,
             zero_data_retention=False,
-            integration="e2e-test",
+            integration="_e2e-test",
         )
         
         assert crawl_job.id is not None

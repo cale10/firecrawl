@@ -72,8 +72,8 @@ class TestAsyncCrawlRequestPreparation:
             allow_subdomains=True,
             max_concurrency=3,
             zero_data_retention=False,
-            integration="  unit-test  ",
+            integration="  _unit-test  ",
         )
         payload = _prepare_crawl_request(req)
-        assert payload["integration"] == "unit-test"
+        assert payload["integration"] == "_unit-test"
 

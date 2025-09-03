@@ -35,7 +35,7 @@ class TestMapRequestPreparation:
             limit=25,
             sitemap="only",
             timeout=15000,
-            integration="  unit-test  ",
+            integration="  _unit-test  ",
         )
         data = _prepare_map_request("https://example.com", opts)
 
@@ -45,7 +45,7 @@ class TestMapRequestPreparation:
         assert data["limit"] == 25
         assert data["sitemap"] == "only"
         assert data["timeout"] == 15000
-        assert data["integration"] == "unit-test"
+        assert data["integration"] == "_unit-test"
 
     def test_invalid_url(self):
         with pytest.raises(ValueError):

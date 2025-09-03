@@ -44,7 +44,7 @@ class TestSearchRequestPreparation:
             ignore_invalid_urls=False,
             timeout=30000,
             scrape_options=scrape_opts,
-            integration="  e2e-test  ",
+            integration="  _e2e-test  ",
         )
         
         data = _prepare_search_request(request)
@@ -84,7 +84,7 @@ class TestSearchRequestPreparation:
         assert scrape_data["skipTlsVerification"] is True
         assert "removeBase64Images" in scrape_data
         assert scrape_data["removeBase64Images"] is False
-        assert data["integration"] == "e2e-test"
+        assert data["integration"] == "_e2e-test"
 
     def test_exclude_none_behavior(self):
         """Test that exclude_none=True behavior is working."""

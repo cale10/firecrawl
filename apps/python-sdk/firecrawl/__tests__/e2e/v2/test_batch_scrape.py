@@ -83,7 +83,7 @@ class TestBatchScrapeE2E:
             zero_data_retention=False,
             poll_interval=1,
             wait_timeout=180,
-            integration="e2e-test",
+            integration="_e2e-test",
         )
 
         assert job.status in ["completed", "failed"]

@@ -103,7 +103,7 @@ class TestScrapeRequestPreparation:
             mobile=True,
             skip_tls_verification=True,
             remove_base64_images=False,
-            integration="  unit-test  ",
+            integration="  _unit-test  ",
         )
         data = _prepare_scrape_request("https://example.com", opts)
-        assert data["integration"] == "unit-test"
+        assert data["integration"] == "_unit-test"
