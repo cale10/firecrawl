@@ -1,85 +1,78 @@
 import { logger as _logger } from "../../lib/logger";
 import { supabase_rr_service } from "../supabase";
-import { webhookSchema } from "./schema";
 import { WebhookConfig } from "./types";
-import { z } from "zod";
-
-export interface WebhookConfigResult {
-  webhookUrl: WebhookConfig | null;
-  hmacSecret: string | undefined;
-}
 
 export async function getWebhookConfig(
   teamId: string,
-  crawlId: string,
-  webhook?: z.infer<typeof webhookSchema>,
-): Promise<WebhookConfigResult> {
-  const logger = _logger.child({
-    module: "webhook-config",
-    method: "getWebhookConfig",
-    teamId,
-    crawlId,
-  });
+  jobId: string,
+  webhook?: WebhookConfig,
+): Promise<{ config: WebhookConfig; secret?: string } | null> {
+  // priority:
+  // - webhook
+  // - self-hosted environment variable
+  // - db webhook (if enabled)
+  if (webhook) {
+    return { config: webhook, secret: await getHmacSecret(teamId) };
+  }
 
-  // Handle self-hosted webhook URL
   const selfHostedUrl = process.env.SELF_HOSTED_WEBHOOK_URL?.replace(
     "{{JOB_ID}}",
-    crawlId,
+    jobId,
   );
+  if (selfHostedUrl) {
+    return {
+      config: {
+        url: selfHostedUrl,
+        headers: {},
+        metadata: {},
+        events: ["completed", "failed", "page", "started"],
+      },
+      secret: process.env.SELF_HOSTED_WEBHOOK_HMAC_SECRET,
+    };
+  }
 
-  const useDbAuthentication = process.env.USE_DB_AUTHENTICATION === "true";
-
-  let webhookUrl: WebhookConfig | null =
-    webhook ??
-    (selfHostedUrl ? webhookSchema.parse({ url: selfHostedUrl }) : null);
-
-  // Only fetch the webhook URL from the database if the self-hosted webhook URL and webhook are not set
-  // and the USE_DB_AUTHENTICATION environment variable is set to true
-  if (!webhookUrl && useDbAuthentication) {
-    try {
-      const { data: webhooksData, error } = await supabase_rr_service
-        .from("webhooks")
-        .select("url")
-        .eq("team_id", teamId)
-        .limit(1);
-
-      if (error) {
-        logger.error("Error fetching webhook URL for team", { error });
-        return { webhookUrl: null, hmacSecret: undefined };
-      }
-
-      if (!webhooksData || webhooksData.length === 0) {
-        return { webhookUrl: null, hmacSecret: undefined };
-      }
-
-      webhookUrl = webhooksData[0].url;
-    } catch (error) {
-      logger.error("Error fetching webhook config", { error });
-      return { webhookUrl: null, hmacSecret: undefined };
+  if (process.env.USE_DB_AUTHENTICATION === "true") {
+    const dbConfig = await fetchWebhookFromDb(teamId);
+    if (dbConfig) {
+      return { config: dbConfig, secret: await getHmacSecret(teamId) };
     }
   }
 
-  let hmacSecret: string | undefined =
-    process.env.SELF_HOSTED_WEBHOOK_HMAC_SECRET;
+  return null;
+}
 
-  if (useDbAuthentication) {
-    try {
-      const { data: teamData, error: teamError } = await supabase_rr_service
-        .from("teams")
-        .select("hmac_secret")
-        .eq("id", teamId)
-        .limit(1)
-        .single();
+async function fetchWebhookFromDb(
+  teamId: string,
+): Promise<WebhookConfig | null> {
+  try {
+    const { data, error } = await supabase_rr_service
+      .from("webhooks")
+      .select("url, headers, metadata, events")
+      .eq("team_id", teamId)
+      .limit(1)
+      .single();
 
-      if (teamError) {
-        logger.error("Error fetching team HMAC secret", { error: teamError });
-      } else if (teamData?.hmac_secret) {
-        hmacSecret = teamData.hmac_secret;
-      }
-    } catch (error) {
-      logger.error("Error fetching HMAC secret", { error });
-    }
+    return error || !data ? null : data;
+  } catch {
+    return null;
+  }
+}
+
+async function getHmacSecret(teamId: string): Promise<string | undefined> {
+  if (process.env.USE_DB_AUTHENTICATION !== "true") {
+    return process.env.SELF_HOSTED_WEBHOOK_HMAC_SECRET;
   }
 
-  return { webhookUrl, hmacSecret };
+  try {
+    const { data, error } = await supabase_rr_service
+      .from("teams")
+      .select("hmac_secret")
+      .eq("id", teamId)
+      .limit(1)
+      .single();
+
+    return error ? undefined : data?.hmac_secret;
+  } catch {
+    return undefined;
+  }
 }

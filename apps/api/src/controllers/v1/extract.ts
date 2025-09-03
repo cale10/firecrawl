@@ -8,17 +8,16 @@ import {
 import { getExtractQueue } from "../../services/queue-service";
 import { saveExtract } from "../../lib/extract/extract-redis";
 import { getTeamIdSyncB } from "../../lib/extract/team-id-sync";
-import { performExtraction } from "../../lib/extract/extraction-service";
+import {
+  ExtractResult,
+  performExtraction,
+} from "../../lib/extract/extraction-service";
 import { performExtraction_F0 } from "../../lib/extract/fire-0/extraction-service-f0";
 import { BLOCKLISTED_URL_MESSAGE } from "../../lib/strings";
 import { isUrlBlocked } from "../../scraper/WebScraper/utils/blocklist";
 import { logger as _logger } from "../../lib/logger";
 import { fromV1ScrapeOptions } from "../v2/types";
-import {
-  createWebhookSender,
-  WebhookEventType,
-  WebhookPayload,
-} from "../../services/webhook";
+import { createWebhookSender, WebhookEvent } from "../../services/webhook";
 
 export async function oldExtract(
   req: RequestWithAuth<{}, ExtractResponse, ExtractRequest>,
@@ -30,24 +29,14 @@ export async function oldExtract(
 
   const sender = await createWebhookSender({
     teamId: req.auth.team_id,
-    crawlId: extractId,
-    v1: true,
+    jobId: extractId,
     webhook: req.body.webhook,
   });
 
-  if (sender) {
-    const payload: WebhookPayload = {
-      type: WebhookEventType.EXTRACT_STARTED,
-      success: true,
-      data: [],
-      jobId: extractId,
-      metadata: sender.webhookUrl.metadata || undefined,
-    };
-    sender.send(payload);
-  }
+  sender?.send(WebhookEvent.EXTRACT_STARTED, { success: true });
 
   try {
-    let result;
+    let result: ExtractResult;
     const model = req.body.agent?.model;
     if (req.body.agent && model && model.toLowerCase().includes("fire-1")) {
       result = await performExtraction(extractId, {
@@ -67,40 +56,24 @@ export async function oldExtract(
 
     if (sender) {
       if (result.success) {
-        const payload: WebhookPayload = {
-          type: WebhookEventType.EXTRACT_COMPLETED,
+        sender.send(WebhookEvent.EXTRACT_COMPLETED, {
           success: true,
           data: result,
-          jobId: extractId,
-          metadata: sender.webhookUrl.metadata || undefined,
-        };
-        sender.send(payload);
+        });
       } else {
-        const payload: WebhookPayload = {
-          type: WebhookEventType.EXTRACT_FAILED,
+        sender.send(WebhookEvent.EXTRACT_FAILED, {
           success: false,
           error: result.error ?? "Unknown error",
-          jobId: extractId,
-          metadata: sender.webhookUrl.metadata || undefined,
-          data: [],
-        };
-        sender.send(payload);
+        });
       }
     }
 
     return res.status(200).json(result);
   } catch (error) {
-    if (sender) {
-      const payload: WebhookPayload = {
-        type: WebhookEventType.EXTRACT_FAILED,
-        success: false,
-        error: "Internal server error",
-        jobId: extractId,
-        metadata: sender.webhookUrl.metadata || undefined,
-        data: [],
-      };
-      sender.send(payload);
-    }
+    sender?.send(WebhookEvent.EXTRACT_FAILED, {
+      success: false,
+      error: "Internal server error",
+    });
 
     return res.status(500).json({
       success: false,

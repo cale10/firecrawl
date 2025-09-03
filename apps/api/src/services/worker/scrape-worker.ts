@@ -31,11 +31,7 @@ import { getJobPriority } from "../../lib/job-priority";
 import { Document, scrapeOptions, TeamFlags } from "../../controllers/v2/types";
 import { hasFormatOfType } from "../../lib/format-utils";
 import { getACUCTeam } from "../../controllers/auth";
-import {
-  createWebhookSender,
-  WebhookEventType,
-  WebhookPayload,
-} from "../webhook";
+import { createWebhookSender, WebhookEvent } from "../webhook";
 import { CustomError } from "../../lib/custom-error";
 import { startWebScraperPipeline } from "../../main/runWebScraper";
 import { CostTracking } from "../../lib/cost-tracking";
@@ -459,41 +455,27 @@ async function processJob(job: Job & { id: string }) {
         });
         const sender = await createWebhookSender({
           teamId: job.data.team_id,
-          crawlId: job.data.crawl_id,
-          v1: true,
+          jobId: job.data.crawl_id,
           webhook: job.data.webhook as any,
         });
         if (sender) {
           const documents = Array.isArray(data?.result?.links)
             ? data.result.links.map((x: any) => ({
-                content:
-                  x?.content?.content ??
-                  x?.content?.rawHtml ??
-                  x?.content?.markdown ??
-                  x?.content ??
-                  "",
+                content: x?.content?.content,
                 markdown: x?.content?.markdown,
-                metadata: x?.content?.metadata ?? {},
+                metadata: x?.content?.metadata,
               }))
             : [];
           if (job.data.crawlerOptions !== null) {
-            const payload: WebhookPayload = {
-              type: WebhookEventType.CRAWL_PAGE,
+            sender.send(WebhookEvent.CRAWL_PAGE, {
               success: true,
               data: documents,
-              jobId: job.data.crawl_id,
-              metadata: sender.webhookUrl.metadata || undefined,
-            };
-            sender.send(payload, { scrapeId: job.id });
+            });
           } else {
-            const payload: WebhookPayload = {
-              type: WebhookEventType.BATCH_SCRAPE_PAGE,
+            sender.send(WebhookEvent.BATCH_SCRAPE_PAGE, {
               success: true,
               data: documents,
-              jobId: job.data.crawl_id,
-              metadata: sender.webhookUrl.metadata || undefined,
-            };
-            sender.send(payload, { scrapeId: job.id });
+            });
           }
         }
       }
@@ -613,9 +595,9 @@ async function processJob(job: Job & { id: string }) {
     if (!job.data.v1 && (job.data.mode === "crawl" || job.data.crawl_id)) {
       const sender = await createWebhookSender({
         teamId: job.data.team_id,
-        crawlId: (job.data.crawl_id ?? (job.id as string)) as string,
-        v1: false,
+        jobId: (job.data.crawl_id ?? (job.id as string)) as string,
         webhook: job.data.webhook as any,
+        v0: true,
       });
       if (sender) {
         const errorMessage =
@@ -625,25 +607,16 @@ async function processJob(job: Job & { id: string }) {
               ? data.error
               : "Unknown error";
         if (job.data.crawlerOptions !== null) {
-          const payload: WebhookPayload = {
-            type: WebhookEventType.CRAWL_PAGE,
+          sender.send(WebhookEvent.CRAWL_PAGE, {
             success: false,
             data: [],
-            error: errorMessage,
-            jobId: job.data.crawl_id ?? (job.id as string),
-            metadata: sender.webhookUrl.metadata || undefined,
-          };
-          sender.send(payload, { scrapeId: job.id });
+          });
         } else {
-          const payload: WebhookPayload = {
-            type: WebhookEventType.BATCH_SCRAPE_PAGE,
+          sender.send(WebhookEvent.BATCH_SCRAPE_PAGE, {
             success: false,
-            data: [],
             error: errorMessage,
-            jobId: job.data.crawl_id ?? (job.id as string),
-            metadata: sender.webhookUrl.metadata || undefined,
-          };
-          sender.send(payload, { scrapeId: job.id });
+            data: [],
+          });
         }
       }
     }
@@ -775,19 +748,12 @@ async function processKickoffJob(job: Job & { id: string }) {
       });
       const sender = await createWebhookSender({
         teamId: job.data.team_id,
-        crawlId: job.data.crawl_id,
-        v1: Boolean(job.data.v1),
+        jobId: job.data.crawl_id,
         webhook: job.data.webhook as any,
+        v0: Boolean(!job.data.v1),
       });
       if (sender) {
-        const payload: WebhookPayload = {
-          type: WebhookEventType.CRAWL_STARTED,
-          success: true,
-          data: [],
-          jobId: job.data.crawl_id,
-          metadata: sender.webhookUrl.metadata || undefined,
-        };
-        sender.send(payload);
+        sender.send(WebhookEvent.CRAWL_STARTED, { success: true });
       }
     }
 

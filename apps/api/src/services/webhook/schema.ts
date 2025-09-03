@@ -3,13 +3,7 @@ import { z } from "zod";
 const BLACKLISTED_WEBHOOK_HEADERS = ["x-firecrawl-signature"];
 
 export const webhookSchema = z.preprocess(
-  x => {
-    if (typeof x === "string") {
-      return { url: x };
-    } else {
-      return x;
-    }
-  },
+  x => (typeof x === "string" ? { url: x } : x),
   z
     .object({
       url: z.string().url(),
@@ -34,5 +28,3 @@ export const webhookSchema = z.preprocess(
       `The following headers are not allowed: ${BLACKLISTED_WEBHOOK_HEADERS.join(", ")}`,
     ),
 );
-
-export type WebhookSchemaType = z.infer<typeof webhookSchema>;

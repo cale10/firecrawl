@@ -1,4 +1,7 @@
-export enum WebhookEventType {
+import { z } from "zod";
+import { webhookSchema } from "./schema";
+
+export enum WebhookEvent {
   CRAWL_STARTED = "crawl.started",
   CRAWL_PAGE = "crawl.page",
   CRAWL_COMPLETED = "crawl.completed",
@@ -11,45 +14,24 @@ export enum WebhookEventType {
   EXTRACT_FAILED = "extract.failed",
 }
 
-export interface WebhookConfig {
-  url: string;
-  headers: Record<string, string>;
-  metadata: Record<string, string>;
-  events: string[];
-}
+export type WebhookEventDataMap = {
+  [WebhookEvent.CRAWL_STARTED]: CrawlStartedData;
+  [WebhookEvent.CRAWL_PAGE]: CrawlPageData;
+  [WebhookEvent.CRAWL_COMPLETED]: CrawlCompletedData;
+  [WebhookEvent.CRAWL_FAILED]: CrawlFailedData;
+  [WebhookEvent.BATCH_SCRAPE_STARTED]: BatchScrapeStartedData;
+  [WebhookEvent.BATCH_SCRAPE_PAGE]: BatchScrapePageData;
+  [WebhookEvent.BATCH_SCRAPE_COMPLETED]: BatchScrapeCompletedData;
+  [WebhookEvent.EXTRACT_STARTED]: ExtractStartedData;
+  [WebhookEvent.EXTRACT_COMPLETED]: ExtractCompletedData;
+  [WebhookEvent.EXTRACT_FAILED]: ExtractFailedData;
+};
 
-export interface WebhookContext {
-  teamId: string;
-  crawlId: string;
-  scrapeId?: string;
-  v1: boolean;
-  webhook?: WebhookConfig;
-  awaitWebhook?: boolean;
-}
+export type WebhookConfig = z.infer<typeof webhookSchema>;
 
-export interface WebhookLogData {
-  success: boolean;
-  error?: string;
-  teamId: string;
-  crawlId: string;
-  scrapeId?: string;
-  url: string;
-  statusCode?: number;
-  event: WebhookEventType;
-}
-
-interface BaseWebhookPayload {
-  success: boolean;
-  type: WebhookEventType;
-  metadata?: Record<string, string>;
-  jobId: string;
-  id?: string; // TODO: remove at some point (v1 feature)
-}
-
-// generic types
 export interface WebhookDocument {
-  content: string;
-  markdown?: string;
+  content?: string;
+  markdown: string;
   metadata: Record<string, any>;
 }
 
@@ -58,84 +40,60 @@ export interface WebhookDocumentLink {
   source: string;
 }
 
-// crawl
-export interface CrawlStartedWebhookPayload extends BaseWebhookPayload {
-  type: WebhookEventType.CRAWL_STARTED;
-  data: [];
+interface BaseWebhookData {
+  success: boolean;
+  scrapeId?: string;
+  awaitWebhook?: boolean;
 }
 
-export interface CrawlPageWebhookPayload extends BaseWebhookPayload {
-  type: WebhookEventType.CRAWL_PAGE;
-  data: WebhookDocument[];
+// crawl
+export interface CrawlStartedData extends BaseWebhookData {
+  success: true;
+}
+
+export interface CrawlPageData extends BaseWebhookData {
+  success: boolean;
+  data: WebhookDocument[] | WebhookDocumentLink[]; // links or documents (v0 compatible)
   error?: string;
 }
 
-export interface CrawlCompletedWebhookPayload extends BaseWebhookPayload {
-  type: WebhookEventType.CRAWL_COMPLETED;
-  data: WebhookDocumentLink[];
+export interface CrawlCompletedData extends BaseWebhookData {
+  success: true;
+  data: WebhookDocument[] | WebhookDocumentLink[]; // empty array or links (v0 compatible)
 }
 
-export interface CrawlCompletedV1WebhookPayload extends BaseWebhookPayload {
-  type: WebhookEventType.CRAWL_COMPLETED;
-  data: WebhookDocument[];
-}
-
-export interface CrawlFailedWebhookPayload extends BaseWebhookPayload {
-  type: WebhookEventType.CRAWL_FAILED;
-  data: [];
+export interface CrawlFailedData extends BaseWebhookData {
+  success: false;
   error: string;
 }
 
-// batch
-export interface BatchScrapeStartedWebhookPayload extends BaseWebhookPayload {
-  type: WebhookEventType.BATCH_SCRAPE_STARTED;
-  data: [];
+// batch scrape
+export interface BatchScrapeStartedData extends BaseWebhookData {
+  success: true;
 }
 
-export interface BatchScrapePageWebhookPayload extends BaseWebhookPayload {
-  type: WebhookEventType.BATCH_SCRAPE_PAGE;
-  data: WebhookDocument[];
-  error?: string;
+export interface BatchScrapePageData extends BaseWebhookData {
+  success: boolean;
+  data: any;
+  error?: string; // more v0 tomfoolery
 }
 
-export interface BatchScrapeCompletedWebhookPayload extends BaseWebhookPayload {
-  type: WebhookEventType.BATCH_SCRAPE_COMPLETED;
-  data: WebhookDocumentLink[];
-}
-
-export interface BatchScrapeCompletedV1WebhookPayload
-  extends BaseWebhookPayload {
-  type: WebhookEventType.BATCH_SCRAPE_COMPLETED;
-  data: WebhookDocument[];
-}
-
-// extract
-export interface ExtractStartedWebhookPayload extends BaseWebhookPayload {
-  type: WebhookEventType.EXTRACT_STARTED;
-  data: [];
-}
-
-export interface ExtractCompletedWebhookPayload extends BaseWebhookPayload {
-  type: WebhookEventType.EXTRACT_COMPLETED;
+export interface BatchScrapeCompletedData extends BaseWebhookData {
+  success: true;
   data: any;
 }
 
-export interface ExtractFailedWebhookPayload extends BaseWebhookPayload {
-  type: WebhookEventType.EXTRACT_FAILED;
-  data: [];
-  error: string;
+// extract
+export interface ExtractStartedData extends BaseWebhookData {
+  success: true;
 }
 
-export type WebhookPayload =
-  | CrawlStartedWebhookPayload
-  | CrawlPageWebhookPayload
-  | CrawlCompletedWebhookPayload
-  | CrawlCompletedV1WebhookPayload
-  | CrawlFailedWebhookPayload
-  | BatchScrapeStartedWebhookPayload
-  | BatchScrapePageWebhookPayload
-  | BatchScrapeCompletedWebhookPayload
-  | BatchScrapeCompletedV1WebhookPayload
-  | ExtractStartedWebhookPayload
-  | ExtractCompletedWebhookPayload
-  | ExtractFailedWebhookPayload;
+export interface ExtractCompletedData extends BaseWebhookData {
+  success: true;
+  data: any;
+}
+
+export interface ExtractFailedData extends BaseWebhookData {
+  success: false;
+  error: string;
+}

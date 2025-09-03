@@ -5,226 +5,200 @@ import {
   getSecureDispatcher,
   isIPPrivate,
 } from "../../scraper/scrapeURL/engines/utils/safeFetch";
-import {
-  WebhookConfig,
-  WebhookContext,
-  WebhookLogData,
-  WebhookPayload,
-} from "./types";
+import { WebhookConfig, WebhookEvent, WebhookEventDataMap } from "./types";
 import { redisEvictConnection } from "../redis";
 import { supabase_service } from "../supabase";
 
 const WEBHOOK_INSERT_QUEUE_KEY = "webhook-insert-queue";
 const WEBHOOK_INSERT_BATCH_SIZE = 1000;
 
-export interface WebhookDeliveryOptions {
-  webhookUrl: WebhookConfig;
-  hmacSecret?: string;
-  payload: WebhookPayload;
-  context: WebhookContext;
-}
+export class WebhookSender {
+  private config: WebhookConfig;
+  private secret?: string;
+  private context: { teamId: string; jobId: string; v0: boolean };
+  private logger: any;
 
-export interface WebhookDeliveryResult {
-  success: boolean;
-  statusCode?: number;
-  error?: string;
-}
+  constructor(
+    config: WebhookConfig,
+    secret: string | undefined,
+    context: { teamId: string; jobId: string; v0: boolean },
+  ) {
+    this.config = config;
+    this.secret = secret;
+    this.context = context;
+    this.logger = _logger.child({
+      module: "webhook-sender",
+      teamId: context.teamId,
+      jobId: context.jobId,
+      isV0: context.v0,
+    });
+  }
 
-function generateHmacSignature(payload: string, secret: string): string {
-  const hmac = createHmac("sha256", secret);
-  hmac.update(payload);
-  return hmac.digest("hex");
-}
+  async send<T extends WebhookEvent>(
+    event: T,
+    data: WebhookEventDataMap[T],
+  ): Promise<void> {
+    if (!this.shouldSendEvent(event)) return;
 
-async function addWebhookInsertJob(data: any) {
-  await redisEvictConnection.rpush(
-    WEBHOOK_INSERT_QUEUE_KEY,
-    JSON.stringify(data),
-  );
+    const payload = {
+      success: data.success,
+      type: event,
+      [this.context.v0 ? "jobId" : "id"]: this.context.jobId,
+      data: "data" in data ? data.data : [],
+      error: "error" in data ? data.error : undefined,
+      metadata: this.config.metadata || undefined,
+    };
+
+    const delivery = this.deliver(payload, data.scrapeId);
+
+    if (data.awaitWebhook) {
+      await delivery;
+    } else {
+      delivery.catch(() => {});
+    }
+  }
+
+  private shouldSendEvent(event: WebhookEvent): boolean {
+    if (!this.config.events?.length) return true;
+    const subType = event.split(".")[1];
+    return this.config.events.includes(subType as any);
+  }
+
+  private async deliver(payload: any, scrapeId?: string): Promise<void> {
+    const webhookHost = new URL(this.config.url).hostname;
+    if (isIPPrivate(webhookHost)) {
+      this.logger.warn("Aborting webhook call to private IP address", {
+        webhookUrl: this.config.url,
+      });
+      return;
+    }
+
+    const payloadString = JSON.stringify(payload);
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...this.config.headers,
+    };
+
+    if (this.secret) {
+      const hmac = createHmac("sha256", this.secret);
+      hmac.update(payloadString);
+      headers["X-Firecrawl-Signature"] = `sha256=${hmac.digest("hex")}`;
+    }
+
+    try {
+      const res = await undici.fetch(this.config.url, {
+        method: "POST",
+        headers,
+        body: payloadString,
+        dispatcher: getSecureDispatcher(),
+        signal: AbortSignal.timeout(this.context.v0 ? 30000 : 10000),
+      });
+
+      await logWebhook({
+        success: res.status >= 200 && res.status < 300,
+        teamId: this.context.teamId,
+        crawlId: this.context.jobId, // this is legacy naming, we should rename it to jobId at some point
+        scrapeId,
+        url: this.config.url,
+        event: payload.type,
+        statusCode: res.status,
+      });
+
+      if (!res.ok) {
+        throw { status: res.status };
+      }
+    } catch (error) {
+      this.logger.error("Failed to send webhook", {
+        error,
+        webhookUrl: this.config.url,
+      });
+
+      await logWebhook({
+        success: false,
+        teamId: this.context.teamId,
+        crawlId: this.context.jobId, // same as above
+        scrapeId,
+        url: this.config.url,
+        event: payload.type,
+        error:
+          error instanceof Error
+            ? error.message
+            : typeof error === "string"
+              ? error
+              : undefined,
+        statusCode:
+          typeof (error as any)?.status === "number"
+            ? (error as any).status
+            : undefined,
+      });
+
+      throw error;
+    }
+  }
+
+  get metadata(): Record<string, string> {
+    return this.config.metadata || {};
+  }
 }
 
 export async function getWebhookInsertQueueLength(): Promise<number> {
   return (await redisEvictConnection.llen(WEBHOOK_INSERT_QUEUE_KEY)) ?? 0;
 }
 
-async function getWebhookInsertJobs(): Promise<any[]> {
+export async function processWebhookInsertJobs() {
   const jobs =
     (await redisEvictConnection.lpop(
       WEBHOOK_INSERT_QUEUE_KEY,
       WEBHOOK_INSERT_BATCH_SIZE,
     )) ?? [];
-  return jobs.map(x => JSON.parse(x));
-}
+  if (jobs.length === 0) return;
 
-export async function processWebhookInsertJobs() {
-  const jobs = await getWebhookInsertJobs();
-  if (jobs.length === 0) {
-    return;
-  }
-  const logger = _logger.child({
-    module: "webhook-delivery",
-    method: "processWebhookInsertJobs",
+  const parsedJobs = jobs.map(x => JSON.parse(x));
+  _logger.info("Webhook inserter found jobs to insert", {
+    jobCount: parsedJobs.length,
   });
-  logger.info(`Webhook inserter found jobs to insert`, {
-    jobCount: jobs.length,
-  });
+
   try {
-    const { error } = await supabase_service.from("webhook_logs").insert(jobs);
-    if (error) {
-      throw error;
-    }
-    logger.info(`Webhook inserter inserted jobs`, { jobCount: jobs.length });
+    await supabase_service.from("webhook_logs").insert(parsedJobs);
+    _logger.info("Webhook inserter inserted jobs", {
+      jobCount: parsedJobs.length,
+    });
   } catch (error) {
-    logger.error(`Webhook inserter failed to insert jobs`, {
+    _logger.error("Webhook inserter failed to insert jobs", {
       error,
-      jobCount: jobs.length,
+      jobCount: parsedJobs.length,
     });
   }
 }
 
-async function logWebhook(data: WebhookLogData) {
+export async function logWebhook(data: {
+  success: boolean;
+  error?: string;
+  teamId: string;
+  crawlId: string;
+  scrapeId?: string;
+  url: string;
+  statusCode?: number;
+  event: WebhookEvent;
+}): Promise<void> {
   try {
-    await addWebhookInsertJob({
-      success: data.success,
-      error: data.error ?? null,
-      team_id: data.teamId,
-      crawl_id: data.crawlId,
-      scrape_id: data.scrapeId ?? null,
-      url: data.url,
-      status_code: data.statusCode ?? null,
-      event: data.event,
-    });
+    await redisEvictConnection.rpush(
+      WEBHOOK_INSERT_QUEUE_KEY,
+      JSON.stringify({
+        success: data.success,
+        error: data.error ?? null,
+        team_id: data.teamId,
+        crawl_id: data.crawlId,
+        scrape_id: data.scrapeId ?? null,
+        url: data.url,
+        status_code: data.statusCode ?? null,
+        event: data.event,
+      }),
+    );
   } catch (error) {
-    _logger.error("Error logging webhook", {
+    this.logger.error("Error logging webhook", {
       error,
-      crawlId: data.crawlId,
-      scrapeId: data.scrapeId,
       teamId: data.teamId,
-      team_id: data.teamId,
-      module: "webhook-delivery",
-      method: "logWebhook",
     });
-  }
-}
-
-export async function deliverWebhook(
-  options: WebhookDeliveryOptions,
-): Promise<WebhookDeliveryResult> {
-  const { webhookUrl, hmacSecret, payload, context } = options;
-
-  const logger = _logger.child({
-    module: "webhook-delivery",
-    method: "deliverWebhook",
-    teamId: context.teamId,
-    crawlId: context.crawlId,
-    scrapeId: context.scrapeId,
-    webhookUrl: webhookUrl.url,
-  });
-
-  // check if the webhook URL is a private IP address (early exit, we also later check in the dispatcher)
-  try {
-    const webhookHost = new URL(webhookUrl.url).hostname;
-    if (isIPPrivate(webhookHost)) {
-      logger.warn("Aborting webhook call to private IP address", {
-        url: webhookUrl.url,
-      });
-      return { success: false, error: "Private IP address not allowed" };
-    }
-  } catch (error) {
-    logger.error("Invalid webhook URL", { error, url: webhookUrl.url });
-    return { success: false, error: "Invalid webhook URL" };
-  }
-
-  const payloadString = JSON.stringify(payload);
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...webhookUrl.headers,
-  };
-
-  if (hmacSecret) {
-    const signature = generateHmacSignature(payloadString, hmacSecret);
-    headers["X-Firecrawl-Signature"] = `sha256=${signature}`;
-  }
-
-  const timeout = context.v1 ? 10000 : 30000; // 10s for v1, 30s for v2
-
-  try {
-    logger.debug("Sending webhook request", {
-      url: webhookUrl.url,
-      headers: Object.keys(headers),
-      payloadSize: payloadString.length,
-      timeout,
-    });
-
-    const res = await undici.fetch(webhookUrl.url, {
-      method: "POST",
-      headers,
-      body: payloadString,
-      dispatcher: getSecureDispatcher(),
-      signal: AbortSignal.timeout(timeout),
-    });
-
-    const success = res.ok;
-    const statusCode = res.status;
-
-    await logWebhook({
-      success,
-      teamId: context.teamId,
-      crawlId: context.crawlId,
-      scrapeId: context.scrapeId,
-      url: webhookUrl.url,
-      event: payload.type,
-      statusCode,
-    });
-
-    if (!success) {
-      logger.warn("Webhook request failed", {
-        statusCode,
-        statusText: res.statusText,
-      });
-      return {
-        success: false,
-        statusCode,
-        error: `HTTP ${statusCode}: ${res.statusText}`,
-      };
-    }
-
-    logger.info("Webhook delivered successfully", { statusCode });
-    return { success: true, statusCode };
-  } catch (error) {
-    const errorMessage =
-      error instanceof Error
-        ? error.message
-        : typeof error === "string"
-          ? error
-          : "Unknown error";
-
-    const statusCode =
-      typeof (error as any)?.status === "number"
-        ? (error as any).status
-        : undefined;
-
-    logger.error("Webhook delivery failed", {
-      error: errorMessage,
-      statusCode,
-    });
-
-    await logWebhook({
-      success: false,
-      teamId: context.teamId,
-      crawlId: context.crawlId,
-      scrapeId: context.scrapeId,
-      url: webhookUrl.url,
-      event: payload.type,
-      error: errorMessage,
-      statusCode,
-    });
-
-    return {
-      success: false,
-      statusCode,
-      error: errorMessage,
-    };
   }
 }

@@ -19,11 +19,7 @@ import {
 } from "../../lib/crawl-redis";
 import { getJobPriority } from "../../lib/job-priority";
 import { addScrapeJobs } from "../../services/queue-jobs";
-import {
-  createWebhookSender,
-  WebhookEventType,
-  BatchScrapeStartedWebhookPayload,
-} from "../../services/webhook";
+import { createWebhookSender, WebhookEvent } from "../../services/webhook";
 import { logger as _logger } from "../../lib/logger";
 import { BLOCKLISTED_URL_MESSAGE } from "../../lib/strings";
 import { isUrlBlocked } from "../../scraper/WebScraper/utils/blocklist";
@@ -192,20 +188,10 @@ export async function batchScrapeController(
     });
     const sender = await createWebhookSender({
       teamId: req.auth.team_id,
-      crawlId: id,
-      v1: true,
+      jobId: id,
       webhook: req.body.webhook,
     });
-    if (sender) {
-      const payload: BatchScrapeStartedWebhookPayload = {
-        type: WebhookEventType.BATCH_SCRAPE_STARTED,
-        success: true,
-        data: [],
-        jobId: id,
-        metadata: sender.webhookUrl.metadata || undefined,
-      };
-      await sender.send(payload, { awaitWebhook: true });
-    }
+    await sender?.send(WebhookEvent.BATCH_SCRAPE_STARTED, { success: true });
   }
 
   const protocol = process.env.ENV === "local" ? req.protocol : "https";
