@@ -6,7 +6,6 @@ export enum WebhookEvent {
   CRAWL_STARTED = "crawl.started",
   CRAWL_PAGE = "crawl.page",
   CRAWL_COMPLETED = "crawl.completed",
-  CRAWL_FAILED = "crawl.failed",
   BATCH_SCRAPE_STARTED = "batch_scrape.started",
   BATCH_SCRAPE_PAGE = "batch_scrape.page",
   BATCH_SCRAPE_COMPLETED = "batch_scrape.completed",
@@ -19,7 +18,6 @@ export type WebhookEventDataMap = {
   [WebhookEvent.CRAWL_STARTED]: CrawlStartedData;
   [WebhookEvent.CRAWL_PAGE]: CrawlPageData;
   [WebhookEvent.CRAWL_COMPLETED]: CrawlCompletedData;
-  [WebhookEvent.CRAWL_FAILED]: CrawlFailedData;
   [WebhookEvent.BATCH_SCRAPE_STARTED]: BatchScrapeStartedData;
   [WebhookEvent.BATCH_SCRAPE_PAGE]: BatchScrapePageData;
   [WebhookEvent.BATCH_SCRAPE_COMPLETED]: BatchScrapeCompletedData;
