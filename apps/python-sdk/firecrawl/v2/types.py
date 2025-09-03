@@ -467,6 +467,7 @@ class MapOptions(BaseModel):
     limit: Optional[int] = None
     timeout: Optional[int] = None
     integration: Optional[str] = None
+    location: Optional['Location'] = None
 
 class MapRequest(BaseModel):
     """Request for mapping a website."""

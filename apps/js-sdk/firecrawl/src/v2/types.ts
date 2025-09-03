@@ -323,6 +323,7 @@ export interface MapOptions {
   limit?: number;
   timeout?: number;
   integration?: string;
+  location?: LocationConfig;
 }
 
 export interface ExtractResponse {

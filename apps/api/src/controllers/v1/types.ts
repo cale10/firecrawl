@@ -34,7 +34,7 @@ const integrationField = z
   .nativeEnum(IntegrationEnum)
   .or(z.string().regex(/^_.+$/))
   .optional()
-  .transform((val) => (val ? (typeof val === 'string' ? val : val) : null));
+  .transform(val => (val ? (typeof val === "string" ? val : val) : null));
 
 export type Format =
   | "markdown"
@@ -291,6 +291,26 @@ export const actionsSchema = z
     },
   );
 
+export const locationSchema = z
+  .object({
+    country: z
+      .string()
+      .optional()
+      .refine(
+        val =>
+          !val ||
+          Object.keys(countries).includes(val.toUpperCase()) ||
+          val === "US-generic",
+        {
+          message:
+            "Invalid country code. Use a valid ISO 3166-1 alpha-2 country code.",
+        },
+      )
+      .transform(val => (val ? val.toUpperCase() : "US-generic")),
+    languages: z.string().array().optional(),
+  })
+  .optional();
+
 function transformIframeSelector(selector: string): string {
   return selector.replace(/(?:^|[\s,])iframe(?=\s|$|[.#\[:,])/g, match => {
     const prefix = match.match(/^[\s,]/)?.[0] || "";
@@ -377,25 +397,7 @@ const baseScrapeOptions = z
     parsePDF: z.boolean().default(true),
     actions: actionsSchema.optional(),
     // New
-    location: z
-      .object({
-        country: z
-          .string()
-          .optional()
-          .refine(
-            val =>
-              !val ||
-              Object.keys(countries).includes(val.toUpperCase()) ||
-              val === "US-generic",
-            {
-              message:
-                "Invalid country code. Please use a valid ISO 3166-1 alpha-2 country code.",
-            },
-          )
-          .transform(val => (val ? val.toUpperCase() : "US-generic")),
-        languages: z.string().array().optional(),
-      })
-      .optional(),
+    location: locationSchema,
 
     // Deprecated
     geolocation: z
@@ -858,6 +860,7 @@ export const mapRequestSchema = crawlerOptions
     useMock: z.string().optional(),
     filterByPath: z.boolean().default(true),
     useIndex: z.boolean().default(true),
+    location: locationSchema,
   })
   .strict(strictMessage);
 

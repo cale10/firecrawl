@@ -29,6 +29,8 @@ def _prepare_map_request(url: str, options: Optional[MapOptions] = None) -> Dict
             data["timeout"] = options.timeout
         if options.integration is not None:
             data["integration"] = options.integration.strip()
+        if options.location is not None:
+            data["location"] = options.location.model_dump(exclude_none=True)
         payload.update(data)
 
     return payload
