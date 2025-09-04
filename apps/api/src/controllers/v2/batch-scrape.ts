@@ -23,6 +23,7 @@ import { createWebhookSender, WebhookEvent } from "../../services/webhook";
 import { logger as _logger } from "../../lib/logger";
 import { BLOCKLISTED_URL_MESSAGE } from "../../lib/strings";
 import { isUrlBlocked } from "../../scraper/WebScraper/utils/blocklist";
+import { checkPermissions } from "../../lib/permissions";
 
 export async function batchScrapeController(
   req: RequestWithAuth<{}, BatchScrapeResponse, BatchScrapeRequest>,
@@ -30,11 +31,11 @@ export async function batchScrapeController(
 ) {
   const preNormalizedBody = { ...req.body };
 
-  if (req.body.zeroDataRetention && !req.acuc?.flags?.allowZDR) {
-    return res.status(400).json({
+  const permissions = checkPermissions(req.body, req.acuc?.flags);
+  if (permissions.error) {
+    return res.status(403).json({
       success: false,
-      error:
-        "Zero data retention is enabled for this team. If you're interested in ZDR, please contact support@firecrawl.com",
+      error: permissions.error,
     });
   }
 
