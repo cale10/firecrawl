@@ -1,6 +1,6 @@
 import undici from "undici";
 import { createHmac } from "crypto";
-import { logger as _logger } from "../../lib/logger";
+import { logger as _logger, logger } from "../../lib/logger";
 import {
   getSecureDispatcher,
   isIPPrivate,
@@ -105,7 +105,7 @@ export class WebhookSender {
       });
 
       if (!res.ok) {
-        throw { status: res.status };
+        throw new Error(`Unexpected response status: ${res.status}`);
       }
     } catch (error) {
       this.logger.error("Failed to send webhook", {
@@ -196,7 +196,7 @@ export async function logWebhook(data: {
       }),
     );
   } catch (error) {
-    this.logger.error("Error logging webhook", {
+    logger.error("Error logging webhook", {
       error,
       teamId: data.teamId,
     });

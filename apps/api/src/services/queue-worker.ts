@@ -222,7 +222,7 @@ const processExtractJobInternal = async (
           job.data.extractId,
     });
 
-    if (job.data.request.webhook && sender) {
+    if (sender) {
       sender.send(WebhookEvent.EXTRACT_FAILED, {
         success: false,
         error:

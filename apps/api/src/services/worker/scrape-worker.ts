@@ -609,6 +609,7 @@ async function processJob(job: Job & { id: string }) {
         if (job.data.crawlerOptions !== null) {
           sender.send(WebhookEvent.CRAWL_PAGE, {
             success: false,
+            error: errorMessage,
             data: [],
           });
         } else {

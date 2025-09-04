@@ -72,12 +72,12 @@ export async function oldExtract(
   } catch (error) {
     sender?.send(WebhookEvent.EXTRACT_FAILED, {
       success: false,
-      error: "Internal server error",
+      error: error instanceof Error ? error.message : "Unknown error",
     });
 
     return res.status(500).json({
       success: false,
-      error: "Internal server error",
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
 }
