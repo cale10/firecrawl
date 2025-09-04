@@ -30,6 +30,11 @@ export async function batchScrapeController(
   res: Response<BatchScrapeResponse>,
 ) {
   const preNormalizedBody = { ...req.body };
+  if (req.body?.ignoreInvalidURLs === true) {
+    req.body = batchScrapeRequestSchemaNoURLValidation.parse(req.body);
+  } else {
+    req.body = batchScrapeRequestSchema.parse(req.body);
+  }
 
   const permissions = checkPermissions(req.body, req.acuc?.flags);
   if (permissions.error) {
@@ -41,12 +46,6 @@ export async function batchScrapeController(
 
   const zeroDataRetention =
     req.acuc?.flags?.forceZDR || req.body.zeroDataRetention;
-
-  if (req.body?.ignoreInvalidURLs === true) {
-    req.body = batchScrapeRequestSchemaNoURLValidation.parse(req.body);
-  } else {
-    req.body = batchScrapeRequestSchema.parse(req.body);
-  }
 
   const id = req.body.appendToId ?? uuidv4();
   const logger = _logger.child({

@@ -21,6 +21,7 @@ export async function scrapeController(
 ) {
   const jobId: string = uuidv4();
   const preNormalizedBody = { ...req.body };
+  req.body = scrapeRequestSchema.parse(req.body);
 
   const permissions = checkPermissions(req.body, req.acuc?.flags);
   if (permissions.error) {
@@ -48,8 +49,6 @@ export async function scrapeController(
     originalRequest: preNormalizedBody,
     account: req.account,
   });
-
-  req.body = scrapeRequestSchema.parse(req.body);
 
   const origin = req.body.origin;
   const timeout = req.body.timeout;
