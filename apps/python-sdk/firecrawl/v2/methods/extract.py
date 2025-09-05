@@ -48,7 +48,7 @@ def _prepare_extract_request(
     if agent is not None:
         try:
             body["agent"] = agent.model_dump(exclude_none=True)  # type: ignore[attr-defined]
-        except Exception:
+        except AttributeError:
             body["agent"] = agent  # fallback
     return body
 
