@@ -12,22 +12,8 @@ import { InternalOptions } from "../../scraper/scrapeURL";
 import { getURLDepth } from "../../scraper/WebScraper/utils/maxDepthUtils";
 import Ajv from "ajv";
 import { ErrorCodes } from "../../lib/error";
-
-export enum IntegrationEnum {
-  DIFY = "dify",
-  ZAPIER = "zapier",
-  PIPEDREAM = "pipedream",
-  RAYCAST = "raycast",
-  LANGCHAIN = "langchain",
-  CREWAI = "crewai",
-  LLAMAINDEX = "llamaindex",
-  N8N = "n8n",
-  CAMELAI = "camelai",
-  MAKE = "make",
-  FLOWISE = "flowise",
-  METAGPT = "metagpt",
-  RELEVANCEAI = "relevanceai",
-}
+import { integrationSchema } from "../../utils/integration";
+import { webhookSchema } from "../../services/webhook/schema";
 
 export type Format =
   | "markdown"
@@ -597,10 +583,7 @@ export const extractV1Options = z
       .default({ onlyMainContent: false })
       .optional(),
     origin: z.string().optional().default("api"),
-    integration: z
-      .nativeEnum(IntegrationEnum)
-      .optional()
-      .transform(val => val || null),
+    integration: integrationSchema.optional().transform(val => val || null),
     urlTrace: z.boolean().default(false),
     timeout: z.number().int().positive().finite().safe().default(60000),
     __experimental_streamSteps: z.boolean().default(false),
@@ -615,6 +598,7 @@ export const extractV1Options = z
     agent: agentOptionsExtract.optional(),
     __experimental_showCostTracking: z.boolean().default(false),
     ignoreInvalidURLs: z.boolean().default(false),
+    webhook: webhookSchema.optional(),
   })
   .strict(strictMessage)
   .refine(obj => obj.urls || obj.prompt, {
@@ -663,10 +647,7 @@ export const scrapeRequestSchema = baseScrapeOptions
     extract: extractOptionsWithAgent.optional(),
     jsonOptions: extractOptionsWithAgent.optional(),
     origin: z.string().optional().default("api"),
-    integration: z
-      .nativeEnum(IntegrationEnum)
-      .optional()
-      .transform(val => val || null),
+    integration: integrationSchema.optional().transform(val => val || null),
     timeout: z.number().int().positive().finite().safe().default(30000),
     zeroDataRetention: z.boolean().optional(),
   })
@@ -681,46 +662,11 @@ export const scrapeRequestSchema = baseScrapeOptions
 export type ScrapeRequest = z.infer<typeof scrapeRequestSchema>;
 export type ScrapeRequestInput = z.input<typeof scrapeRequestSchema>;
 
-const BLACKLISTED_WEBHOOK_HEADERS = ["x-firecrawl-signature"];
-export const webhookSchema = z.preprocess(
-  x => {
-    if (typeof x === "string") {
-      return { url: x };
-    } else {
-      return x;
-    }
-  },
-  z
-    .object({
-      url: z.string().url(),
-      headers: z.record(z.string(), z.string()).default({}),
-      metadata: z.record(z.string(), z.string()).default({}),
-      events: z
-        .array(z.enum(["completed", "failed", "page", "started"]))
-        .default(["completed", "failed", "page", "started"]),
-    })
-    .strict(strictMessage)
-    .refine(
-      obj => {
-        const blacklistedLower = BLACKLISTED_WEBHOOK_HEADERS.map(h =>
-          h.toLowerCase(),
-        );
-        return !Object.keys(obj.headers).some(key =>
-          blacklistedLower.includes(key.toLowerCase()),
-        );
-      },
-      `The following headers are not allowed: ${BLACKLISTED_WEBHOOK_HEADERS.join(", ")}`,
-    ),
-);
-
 export const batchScrapeRequestSchema = baseScrapeOptions
   .extend({
     urls: url.array(),
     origin: z.string().optional().default("api"),
-    integration: z
-      .nativeEnum(IntegrationEnum)
-      .optional()
-      .transform(val => val || null),
+    integration: integrationSchema.optional().transform(val => val || null),
     webhook: webhookSchema.optional(),
     appendToId: z.string().uuid().optional(),
     ignoreInvalidURLs: z.boolean().default(false),
@@ -737,10 +683,7 @@ export const batchScrapeRequestSchemaNoURLValidation = baseScrapeOptions
   .extend({
     urls: z.string().array(),
     origin: z.string().optional().default("api"),
-    integration: z
-      .nativeEnum(IntegrationEnum)
-      .optional()
-      .transform(val => val || null),
+    integration: integrationSchema.optional().transform(val => val || null),
     webhook: webhookSchema.optional(),
     appendToId: z.string().uuid().optional(),
     ignoreInvalidURLs: z.boolean().default(false),
@@ -793,10 +736,7 @@ export const crawlRequestSchema = crawlerOptions
   .extend({
     url,
     origin: z.string().optional().default("api"),
-    integration: z
-      .nativeEnum(IntegrationEnum)
-      .optional()
-      .transform(val => val || null),
+    integration: integrationSchema.optional().transform(val => val || null),
     scrapeOptions: baseScrapeOptions.default({}),
     webhook: webhookSchema.optional(),
     limit: z.number().default(10000),
@@ -854,10 +794,7 @@ export const mapRequestSchema = crawlerOptions
   .extend({
     url,
     origin: z.string().optional().default("api"),
-    integration: z
-      .nativeEnum(IntegrationEnum)
-      .optional()
-      .transform(val => val || null),
+    integration: integrationSchema.optional().transform(val => val || null),
     includeSubdomains: z.boolean().default(true),
     search: z.string().optional(),
     ignoreQueryParameters: z.boolean().default(true),
@@ -1431,10 +1368,7 @@ export const searchRequestSchema = z
     country: z.string().optional().default("us"),
     location: z.string().optional(),
     origin: z.string().optional().default("api"),
-    integration: z
-      .nativeEnum(IntegrationEnum)
-      .optional()
-      .transform(val => val || null),
+    integration: integrationSchema.optional().transform(val => val || null),
     timeout: z.number().int().positive().finite().safe().default(60000),
     ignoreInvalidURLs: z.boolean().optional().default(false),
     __searchPreviewToken: z.string().optional(),
