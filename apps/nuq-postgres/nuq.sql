@@ -21,6 +21,12 @@ CREATE TABLE IF NOT EXISTS nuq.queue_scrape (
   CONSTRAINT queue_scrape_pkey PRIMARY KEY (id)
 );
 
+ALTER TABLE nuq.queue_scrape
+SET (autovacuum_vacuum_scale_factor = 0.01,
+     autovacuum_analyze_scale_factor = 0.01,
+     autovacuum_vacuum_cost_limit = 2000,
+     autovacuum_vacuum_cost_delay = 2);
+
 CREATE INDEX IF NOT EXISTS queue_scrape_active_locked_at_idx ON nuq.queue_scrape USING btree (locked_at) WHERE (status = 'active'::nuq.job_status);
 CREATE INDEX IF NOT EXISTS nuq_queue_scrape_queued_optimal_2_idx ON nuq.queue_scrape (priority ASC, created_at ASC, id) WHERE (status = 'queued'::nuq.job_status);
 CREATE INDEX IF NOT EXISTS nuq_queue_scrape_failed_created_at_idx ON nuq.queue_scrape USING btree (created_at) WHERE (status = 'failed'::nuq.job_status);
