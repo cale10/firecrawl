@@ -12,7 +12,6 @@ import {
   defaultOrigin,
 } from "../../lib/default-values";
 import { addScrapeJob, waitForJob } from "../../services/queue-jobs";
-import { getScrapeQueue } from "../../services/queue-service";
 import { redisEvictConnection } from "../../../src/services/redis";
 import { v4 as uuidv4 } from "uuid";
 import { logger } from "../../lib/logger";
@@ -23,6 +22,8 @@ import { Document as V0Document } from "./../../lib/entities";
 import { BLOCKLISTED_URL_MESSAGE } from "../../lib/strings";
 import { fromV0Combo } from "../v2/types";
 import { ScrapeJobTimeoutError } from "../../lib/error";
+import { scrapeQueue } from "../../services/worker/nuq";
+import { getErrorContactMessage } from "../../lib/deployment";
 
 async function scrapeHelper(
   jobId: string,
@@ -53,8 +54,6 @@ async function scrapeHelper(
     };
   }
 
-  const jobPriority = await getJobPriority({ team_id, basePriority: 10 });
-
   const { scrapeOptions, internalOptions } = fromV0Combo(
     pageOptions,
     extractorOptions,
@@ -81,15 +80,14 @@ async function scrapeHelper(
       zeroDataRetention: false, // not supported on v0
       apiKeyId,
     },
-    {},
     jobId,
-    jobPriority,
+    await getJobPriority({ team_id, basePriority: 10 }),
   );
 
   let doc;
 
   try {
-    doc = await waitForJob(jobId, timeout);
+    doc = await waitForJob(jobId, timeout, false);
   } catch (e) {
     if (e instanceof ScrapeJobTimeoutError) {
       return {
@@ -120,7 +118,7 @@ async function scrapeHelper(
     return err;
   }
 
-  await getScrapeQueue().remove(jobId);
+  await scrapeQueue.removeJob(jobId);
 
   if (!doc) {
     console.error("!!! PANIC DOC IS", doc);
@@ -233,8 +231,7 @@ export async function scrapeController(req: Request, res: Response) {
       logger.error(error);
       earlyReturn = true;
       return res.status(500).json({
-        error:
-          "Error checking team credits. Please contact help@firecrawl.com for help.",
+        error: getErrorContactMessage(),
       });
     }
 
