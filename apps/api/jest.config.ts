@@ -4,7 +4,7 @@ const config: Config = {
   verbose: true,
   preset: "ts-jest",
   testEnvironment: "node",
-  modulePathIgnorePatterns: ["<rootDir>/dist/"],
+  testPathIgnorePatterns: ["<rootDir>/dist/"],
   forceExit: true,
   detectOpenHandles: true,
   openHandlesTimeout: 120000,

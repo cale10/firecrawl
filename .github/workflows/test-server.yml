@@ -67,6 +67,7 @@ jobs:
       PROXY_USERNAME: ${{ matrix.proxy == 'proxy' && secrets.PROXY_USERNAME || '' }}
       PROXY_PASSWORD: ${{ matrix.proxy == 'proxy' && secrets.PROXY_PASSWORD || '' }}
       NUQ_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+      NUQ_REDUCE_NOISE: true
       HOST: 0.0.0.0
     steps:
       - uses: actions/checkout@v5
@@ -201,6 +202,7 @@ jobs:
       IDMUX_URL: ${{ secrets.IDMUX_URL }}
       LOG_ENCRYPTION_KEY: ${{ secrets.LOG_ENCRYPTION_KEY }}
       NUQ_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+      NUQ_REDUCE_NOISE: true
       HOST: 0.0.0.0
     steps:
       - uses: actions/checkout@v5

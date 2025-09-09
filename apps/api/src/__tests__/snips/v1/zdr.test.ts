@@ -35,7 +35,7 @@ if (process.env.TEST_SUITE_SELF_HOSTED) {
     try {
       await stat("firecrawl.log");
     } catch (e) {
-      console.warn("No api.log file found");
+      console.warn("No firecrawl.log file found");
       return [];
     }
     logs = await readFile("firecrawl.log", "utf8");
