@@ -59,10 +59,6 @@ jobs:
         image: redis
         ports:
           - 6379:6379
-      postgres:
-        image: postgres
-        ports:
-          - 5432:5432
     env:
       OPENAI_API_KEY: ${{ matrix.ai == 'openai' && secrets.OPENAI_API_KEY || '' }}
       SEARXNG_ENDPOINT: ${{ matrix.search == 'searxng' && 'http://localhost:3434' || '' }}
@@ -73,6 +69,10 @@ jobs:
       NUQ_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
     steps:
       - uses: actions/checkout@v5
+      - name: Run Docker Postgres
+        run: |
+          docker build -t firecrawl/nuq-postgres:latest ./apps/nuq-postgres
+          docker run -d -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=postgres --name postgres firecrawl/nuq-postgres:latest
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -119,16 +119,6 @@ jobs:
           docker run -d -p 3434:8080 -v "${PWD}/searxng:/etc/searxng" --name searxng searxng/searxng
           pnpx wait-on tcp:3434 -t 30s
         working-directory: ./
-      - name: Apply Postgres schema
-        run: |
-          # Wait for Postgres service to be ready
-          until docker exec ${{ job.services.postgres.id }} pg_isready -U postgres; do
-            echo "Waiting for Postgres to be ready..."
-            sleep 1
-          done
-          # Copy SQL into the Postgres container and apply it
-          docker cp ./apps/nuq-postgres/nuq.sql ${{ job.services.postgres.id }}:/nuq.sql
-          docker exec -i ${{ job.services.postgres.id }} psql -U postgres -d postgres -v ON_ERROR_STOP=0 -f /nuq.sql
       - name: Start playwright
         if: matrix.engine == 'playwright'
         run: pnpm run dev > playwright.log 2>&1 &
@@ -172,10 +162,6 @@ jobs:
         image: redis
         ports:
           - 6379:6379
-      postgres:
-        image: postgres
-        ports:
-          - 5432:5432
     env:
       BULL_AUTH_KEY: ${{ secrets.BULL_AUTH_KEY }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -217,6 +203,10 @@ jobs:
       HOST: 0.0.0.0
     steps:
       - uses: actions/checkout@v5
+      - name: Run Docker Postgres
+        run: |
+          docker build -t firecrawl/nuq-postgres:latest ./apps/nuq-postgres
+          docker run -d -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=postgres --name postgres firecrawl/nuq-postgres:latest
       - name: Tailscale
         uses: tailscale/github-action@v3
         with:
