@@ -238,16 +238,6 @@ jobs:
           go build -o libhtml-to-markdown.so -buildmode=c-shared html-to-markdown.go
           chmod +x libhtml-to-markdown.so
         working-directory: ./apps/api/sharedLibs/go-html-to-md
-      - name: Apply Postgres schema
-        run: |
-          # Wait for Postgres service to be ready
-          until docker exec ${{ job.services.postgres.id }} pg_isready -U postgres; do
-            echo "Waiting for Postgres to be ready..."
-            sleep 1
-          done
-          # Copy SQL into the Postgres container and apply it
-          docker cp ./apps/nuq-postgres/nuq.sql ${{ job.services.postgres.id }}:/nuq.sql
-          docker exec -i ${{ job.services.postgres.id }} psql -U postgres -d postgres -v ON_ERROR_STOP=0 -f /nuq.sql
       - name: Build the application and run snippet tests
         run: pnpm harness pnpm test:snips
         working-directory: ./apps/api
