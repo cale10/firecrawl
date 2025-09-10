@@ -411,11 +411,6 @@ async function runDevMode(): Promise<void> {
 }
 
 async function runProductionMode(): Promise<void> {
-  logger.section("Building TypeScript");
-  const build = execForward("api@build", "pnpm build");
-  await build.promise;
-  logger.success("Build complete");
-
   const services = startServices();
 
   logger.info("Waiting for API on localhost:3002");
@@ -427,18 +422,6 @@ async function runProductionMode(): Promise<void> {
       process.on("SIGINT", resolve);
       process.on("SIGTERM", resolve);
     }),
-    services.api!.promise,
-    services.worker!.promise,
-    ...services.nuqWorkers.map(w => w.promise),
-    ...(services.indexWorker ? [services.indexWorker.promise] : []),
-  ]);
-}
-
-async function runCommand(command: string[], services: Services) {
-  logger.section(`Running: ${command.join(" ")}`);
-  const cmd = execForward("command", command);
-  await Promise.race([
-    cmd.promise,
     services.api!.promise,
     services.worker!.promise,
     ...services.nuqWorkers.map(w => w.promise),
@@ -465,10 +448,8 @@ function printUsage() {
   console.error(
     `  --start        Start in development mode (auto-restart on changes)`,
   );
-  console.error(`  --start-built  Start in production mode (no rebuild)`);
-  console.error(`  --start-docker Start in docker mode (skip all builds)\n`);
-  console.error(`Development mode watches TypeScript files and automatically`);
-  console.error(`restarts services when compilation succeeds.`);
+  console.error(`  --start-built  Start services without rebuilding`);
+  console.error(`  --start-docker Start services (skip install, assume built)`);
 }
 
 async function main() {
@@ -483,7 +464,6 @@ async function main() {
 
     const command = process.argv.slice(2);
     const isDev = command[0] === "--start";
-    const isProd = ["--start-built", "--start-docker"].includes(command[0]);
 
     if (command[0] !== "--start-docker") {
       await installDependencies();
@@ -491,15 +471,8 @@ async function main() {
 
     if (isDev) {
       await runDevMode();
-    } else if (isProd) {
-      await runProductionMode();
     } else {
-      const build = execForward("api@build", "pnpm build");
-      await build.promise;
-
-      const services = startServices();
-      await waitForPort(3002, "localhost");
-      await runCommand(command, services);
+      await runProductionMode();
     }
   } catch (error: any) {
     logger.error("Fatal error occurred");
