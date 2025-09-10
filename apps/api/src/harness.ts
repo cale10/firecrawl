@@ -278,8 +278,12 @@ async function installDependencies() {
         logger.info("Installing API dependencies");
         const install = execForward("api@install", "pnpm install");
         await install.promise;
+
+        logger.info("Building API");
+        const build = execForward("api@build", "pnpm build");
+        await build.promise;
       } else {
-        logger.warn("Skipping API install");
+        logger.warn("Skipping API install and build");
       }
     })(),
 
