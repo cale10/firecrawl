@@ -18,6 +18,7 @@ interface Services {
   worker?: ProcessResult;
   nuqWorkers: ProcessResult[];
   indexWorker?: ProcessResult;
+  command?: ProcessResult;
 }
 
 const colors = {
@@ -308,7 +309,7 @@ async function installDependencies() {
   logger.success("Dependencies installed");
 }
 
-function startServices(): Services {
+function startServices(command?: string[]): Services {
   logger.section("Starting services");
 
   const api = execForward(
@@ -348,7 +349,12 @@ function startServices(): Services {
         )
       : undefined;
 
-  return { api, worker, nuqWorkers, indexWorker };
+  const commandProcess =
+    command && !command?.[0].startsWith("--")
+      ? execForward("command", command)
+      : undefined;
+
+  return { api, worker, nuqWorkers, indexWorker, command: commandProcess };
 }
 
 async function stopServices(services: Services) {
@@ -357,6 +363,7 @@ async function stopServices(services: Services) {
     services.worker && terminateProcess(services.worker.process),
     ...services.nuqWorkers.map(w => terminateProcess(w.process)),
     services.indexWorker && terminateProcess(services.indexWorker.process),
+    services.command && terminateProcess(services.command.process),
   ].filter(Boolean);
 
   await Promise.all(stopPromises);
@@ -418,23 +425,33 @@ async function runDevMode(): Promise<void> {
   watch.kill();
 }
 
-async function runProductionMode(): Promise<void> {
-  const services = startServices();
+async function runProductionMode(command: string[]): Promise<void> {
+  const services = startServices(command);
 
   logger.info("Waiting for API on localhost:3002");
   await waitForPort(3002, "localhost");
-  logger.success("All services ready");
 
-  await Promise.race([
+  await waitForTermination(services);
+}
+
+async function waitForTermination(services: Services): Promise<void> {
+  logger.info("All services running. Press Ctrl+C to stop");
+
+  const promises: Promise<void>[] = [
     new Promise<void>(resolve => {
       process.on("SIGINT", resolve);
       process.on("SIGTERM", resolve);
     }),
-    services.api!.promise,
-    services.worker!.promise,
-    ...services.nuqWorkers.map(w => w.promise),
-    ...(services.indexWorker ? [services.indexWorker.promise] : []),
-  ]);
+  ];
+
+  if (services.command) promises.push(services.command.promise);
+  if (services.api) promises.push(services.api.promise);
+  if (services.worker) promises.push(services.worker.promise);
+  if (services.indexWorker) promises.push(services.indexWorker.promise);
+
+  promises.push(...services.nuqWorkers.map(w => w.promise));
+
+  await Promise.race(promises);
 }
 
 let shuttingDown = false;
@@ -480,7 +497,7 @@ async function main() {
     if (isDev) {
       await runDevMode();
     } else {
-      await runProductionMode();
+      await runProductionMode(command);
     }
   } catch (error: any) {
     logger.error("Fatal error occurred");
