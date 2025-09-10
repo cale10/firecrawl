@@ -1,6 +1,7 @@
 import { Logger } from "winston";
 import { logger } from "../../lib/logger";
 import { Client, Pool } from "pg";
+import { type ScrapeJobData } from "../../types";
 
 // === Basics
 
@@ -558,7 +559,7 @@ export async function nuqHealthCheck(): Promise<boolean> {
 
 // === Instances
 
-export const scrapeQueue = new NuQ("nuq.queue_scrape");
+export const scrapeQueue = new NuQ<ScrapeJobData>("nuq.queue_scrape");
 
 // === Cleanup
 

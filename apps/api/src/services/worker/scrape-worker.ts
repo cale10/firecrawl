@@ -60,6 +60,11 @@ import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-grpc";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
 import type { NuQJob } from "./nuq";
+import {
+  ScrapeJobKickoff,
+  ScrapeJobKickoffSitemap,
+  ScrapeJobSingleUrls,
+} from "../../types";
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -138,7 +143,7 @@ async function billScrapeJob(
   return creditsToBeBilled;
 }
 
-async function processJob(job: NuQJob<any>) {
+async function processJob(job: NuQJob<ScrapeJobSingleUrls>) {
   const logger = _logger.child({
     module: "queue-worker",
     method: "processJob",
@@ -224,7 +229,6 @@ async function processJob(job: NuQJob<any>) {
           },
         ],
       },
-      project_id: job.data.project_id,
       document: doc,
     };
 
@@ -441,7 +445,7 @@ async function processJob(job: NuQJob<any>) {
         job.data.internalOptions?.bypassBilling ?? false,
       );
 
-      if (job.data.mode !== "crawl" && job.data.v1) {
+      if (job.data.v1) {
         const sender = await createWebhookSender({
           teamId: job.data.team_id,
           jobId: job.data.crawl_id,
@@ -574,7 +578,6 @@ async function processJob(job: NuQJob<any>) {
     const data = {
       success: false,
       document: null,
-      project_id: job.data.project_id,
       error:
         error instanceof Error
           ? error
@@ -583,7 +586,7 @@ async function processJob(job: NuQJob<any>) {
             : new Error(JSON.stringify(error)),
     };
 
-    if (job.data.mode === "crawl" || job.data.crawl_id) {
+    if (job.data.crawl_id) {
       const sender = await createWebhookSender({
         teamId: job.data.team_id,
         jobId: (job.data.crawl_id ?? job.id) as string,
@@ -696,7 +699,7 @@ async function kickoffGetIndexLinks(
   return validIndexLinks;
 }
 
-async function processKickoffJob(job: NuQJob<any>) {
+async function processKickoffJob(job: NuQJob<ScrapeJobKickoff>) {
   const logger = _logger.child({
     module: "queue-worker",
     method: "processKickoffJob",
