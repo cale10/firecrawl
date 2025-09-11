@@ -75,7 +75,13 @@ type ScrapeJobKickoffSitemapUnique = {
   mode: "kickoff_sitemap";
 
   crawl_id: string;
-  sitemap_url: string;
+  sitemapUrl: string;
+  location?: ScrapeOptions["location"];
+  origin: string;
+  integration?: string | null;
+  webhook?: z.infer<typeof webhookSchema>;
+  v1: boolean;
+  apiKeyId: number | null;
 };
 
 export type ScrapeJobKickoffSitemap = ScrapeJobCommon &
