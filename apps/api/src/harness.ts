@@ -322,6 +322,9 @@ function startServices(command?: string[]): Services {
     process.argv[2] === "--start-docker"
       ? "node dist/src/index.js"
       : "pnpm server:production:nobuild",
+    {
+      NUQ_REDUCE_NOISE: "true",
+    },
   );
 
   const worker = execForward(
@@ -329,6 +332,9 @@ function startServices(command?: string[]): Services {
     process.argv[2] === "--start-docker"
       ? "node dist/src/services/queue-worker.js"
       : "pnpm worker:production",
+    {
+      NUQ_REDUCE_NOISE: "true",
+    },
   );
 
   const nuqWorkers = Array.from({ length: 5 }, (_, i) =>
@@ -351,6 +357,9 @@ function startServices(command?: string[]): Services {
           process.argv[2] === "--start-docker"
             ? "node dist/src/services/indexing/index-worker.js"
             : "pnpm index-worker:production",
+          {
+            NUQ_REDUCE_NOISE: "true",
+          },
         )
       : undefined;
 
