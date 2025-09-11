@@ -821,7 +821,7 @@ async function processKickoffJob(job: NuQJob<ScrapeJobKickoff>) {
       } else {
         const urlObj = new URL(job.data.url);
 
-        const attempts: string[] = [];
+        const attempts: string[] = crawler.robots.getSitemaps();
 
         // Append sitemap.xml
         const urlWithSitemap = new URL(urlObj.href);
