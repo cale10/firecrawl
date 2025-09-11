@@ -953,9 +953,16 @@ async function processKickoffSitemapJob(job: NuQJob<ScrapeJobKickoffSitemap>) {
       logger,
     });
 
-    const passingURLs = results.urls.filter(
-      url => crawler.filterURL(url.href, sc.originUrl!).allowed,
-    );
+    const passingURLs = (
+      await crawler.filterLinks(
+        [...new Set(results.urls.map(x => x.href))].filter(
+          url => crawler.filterURL(url, sc.originUrl!).allowed,
+        ),
+        Infinity,
+        sc.crawlerOptions.maxDepth ?? 10,
+        false,
+      )
+    ).links;
 
     if (passingURLs.length > 0) {
       logger.debug("Using urls of length " + passingURLs.length, {
@@ -969,7 +976,7 @@ async function processKickoffSitemapJob(job: NuQJob<ScrapeJobKickoffSitemap>) {
 
       const jobs = passingURLs.map(url => ({
         data: {
-          url: url.href,
+          url: url,
           mode: "single_urls" as const,
           team_id: job.data.team_id,
           crawlerOptions: sc.crawlerOptions,

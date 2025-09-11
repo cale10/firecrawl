@@ -377,7 +377,11 @@ export async function waitForJob(
   try {
     doc = await Promise.race(
       [
-        scrapeQueue.waitForJob(jobId, timeout !== null ? timeout + 100 : null),
+        scrapeQueue.waitForJob(
+          jobId,
+          timeout !== null ? timeout + 100 : null,
+          logger,
+        ),
         timeout !== null
           ? new Promise<Document>((_resolve, reject) => {
               setTimeout(() => {

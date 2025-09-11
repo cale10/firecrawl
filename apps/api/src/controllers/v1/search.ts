@@ -156,7 +156,7 @@ async function scrapeSearchResult(
       teamId: options.teamId,
       origin: options.origin,
     });
-    await scrapeQueue.removeJob(jobId);
+    await scrapeQueue.removeJob(jobId, logger);
 
     const document = {
       title: searchResult.title,

@@ -139,7 +139,7 @@ async function scrapeSearchResult(
       origin: options.origin,
     });
 
-    await scrapeQueue.removeJob(jobId);
+    await scrapeQueue.removeJob(jobId, logger);
 
     const document = {
       title: searchResult.title,

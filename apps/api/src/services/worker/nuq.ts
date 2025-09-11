@@ -143,6 +143,7 @@ class NuQ<JobData = any, JobReturnValue = any> {
 
   public async getJob(
     id: string,
+    _logger = logger,
   ): Promise<NuQJob<JobData, JobReturnValue> | null> {
     const start = Date.now();
     try {
@@ -155,7 +156,7 @@ class NuQ<JobData = any, JobReturnValue = any> {
         ).rows[0],
       );
     } finally {
-      logger.info("nuqGetJob metrics", {
+      _logger.info("nuqGetJob metrics", {
         module: "nuq/metrics",
         method: "nuqGetJob",
         duration: Date.now() - start,
@@ -166,6 +167,7 @@ class NuQ<JobData = any, JobReturnValue = any> {
 
   public async getJobs(
     ids: string[],
+    _logger: Logger = logger,
   ): Promise<NuQJob<JobData, JobReturnValue>[]> {
     if (ids.length === 0) return [];
 
@@ -178,7 +180,7 @@ class NuQ<JobData = any, JobReturnValue = any> {
         )
       ).rows.map(row => this.rowToJob(row)!);
     } finally {
-      logger.info("nuqGetJobs metrics", {
+      _logger.info("nuqGetJobs metrics", {
         module: "nuq/metrics",
         method: "nuqGetJobs",
         duration: Date.now() - start,
@@ -216,6 +218,7 @@ class NuQ<JobData = any, JobReturnValue = any> {
   public async getJobsWithStatuses(
     ids: string[],
     statuses: NuQJobStatus[],
+    _logger: Logger = logger,
   ): Promise<NuQJob<JobData, JobReturnValue>[]> {
     if (ids.length === 0) return [];
 
@@ -228,7 +231,7 @@ class NuQ<JobData = any, JobReturnValue = any> {
         )
       ).rows.map(row => this.rowToJob(row)!);
     } finally {
-      logger.info("nuqGetJobsWithStatuses metrics", {
+      _logger.info("nuqGetJobsWithStatuses metrics", {
         module: "nuq/metrics",
         method: "nuqGetJobsWithStatuses",
         duration: Date.now() - start,
@@ -238,7 +241,10 @@ class NuQ<JobData = any, JobReturnValue = any> {
     }
   }
 
-  public async removeJob(id: string): Promise<boolean> {
+  public async removeJob(
+    id: string,
+    _logger: Logger = logger,
+  ): Promise<boolean> {
     const start = Date.now();
     try {
       return (
@@ -249,7 +255,7 @@ class NuQ<JobData = any, JobReturnValue = any> {
         ).rowCount !== 0
       );
     } finally {
-      logger.info("nuqRemoveJob metrics", {
+      _logger.info("nuqRemoveJob metrics", {
         module: "nuq/metrics",
         method: "nuqRemoveJob",
         duration: Date.now() - start,
@@ -258,7 +264,10 @@ class NuQ<JobData = any, JobReturnValue = any> {
     }
   }
 
-  public async removeJobs(ids: string[]): Promise<number> {
+  public async removeJobs(
+    ids: string[],
+    _logger: Logger = logger,
+  ): Promise<number> {
     if (ids.length === 0) return 0;
 
     const start = Date.now();
@@ -272,7 +281,7 @@ class NuQ<JobData = any, JobReturnValue = any> {
         ).rowCount ?? 0
       );
     } finally {
-      logger.info("nuqRemoveJobs metrics", {
+      _logger.info("nuqRemoveJobs metrics", {
         module: "nuq/metrics",
         method: "nuqRemoveJobs",
         duration: Date.now() - start,
@@ -316,6 +325,7 @@ class NuQ<JobData = any, JobReturnValue = any> {
   public waitForJob(
     id: string,
     timeout: number | null,
+    _logger: Logger = logger,
   ): Promise<JobReturnValue> {
     const done = new Promise<JobReturnValue>(
       (async (resolve, reject) => {
@@ -333,7 +343,7 @@ class NuQ<JobData = any, JobReturnValue = any> {
 
           const listener = async function (_msg: "completed" | "failed") {
             if (timer) clearTimeout(timer);
-            const job = await this.getJob(id);
+            const job = await this.getJob(id, _logger);
             if (!job) {
               reject(new Error("Job raced out while waiting for it"));
             } else {
@@ -352,7 +362,7 @@ class NuQ<JobData = any, JobReturnValue = any> {
           }
 
           try {
-            const job = await this.getJob(id);
+            const job = await this.getJob(id, _logger);
             if (job && ["completed", "failed"].includes(job.status)) {
               this.removeListener(id, listener);
               if (timer) clearTimeout(timer);
@@ -364,7 +374,7 @@ class NuQ<JobData = any, JobReturnValue = any> {
               return;
             }
           } catch (e) {
-            logger.warn("nuqGetJob ensure check failed", {
+            _logger.warn("nuqGetJob ensure check failed", {
               module: "nuq",
               method: "nuqWaitForJob",
               error: e,
@@ -375,7 +385,7 @@ class NuQ<JobData = any, JobReturnValue = any> {
           const timeoutAt = timeout !== null ? Date.now() + timeout : null;
           const poll = async function poll() {
             try {
-              const job = await this.getJob(id);
+              const job = await this.getJob(id, _logger);
               if (job && ["completed", "failed"].includes(job.status)) {
                 if (job.status === "completed") {
                   return resolve(job.returnvalue!);

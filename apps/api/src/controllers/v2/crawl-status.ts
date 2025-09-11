@@ -46,9 +46,15 @@ export type DBJob = {
   team_id: string;
 };
 
-export async function getJob(id: string): Promise<PseudoJob<any> | null> {
+export async function getJob(
+  id: string,
+  _logger = logger,
+): Promise<PseudoJob<any> | null> {
   const [nuqJob, dbJob, gcsJob] = await Promise.all([
-    scrapeQueue.getJob(id) as Promise<NuQJob<ScrapeJobSingleUrls> | null>,
+    scrapeQueue.getJob(
+      id,
+      _logger,
+    ) as Promise<NuQJob<ScrapeJobSingleUrls> | null>,
     (process.env.USE_DB_AUTHENTICATION === "true"
       ? supabaseGetJobById(id)
       : null) as Promise<DBJob | null>,
@@ -65,7 +71,7 @@ export async function getJob(id: string): Promise<PseudoJob<any> | null> {
 
   const data = gcsJob ?? dbJob?.docs ?? nuqJob?.returnvalue;
   if (gcsJob === null && data) {
-    logger.warn("GCS Job not found", {
+    _logger.warn("GCS Job not found", {
       jobId: id,
     });
   }
@@ -86,9 +92,12 @@ export async function getJob(id: string): Promise<PseudoJob<any> | null> {
   return job;
 }
 
-export async function getJobs(ids: string[]): Promise<PseudoJob<any>[]> {
+export async function getJobs(
+  ids: string[],
+  _logger = logger,
+): Promise<PseudoJob<any>[]> {
   const [nuqJobs, dbJobs, gcsJobs] = await Promise.all([
-    scrapeQueue.getJobs(ids) as Promise<NuQJob<ScrapeJobSingleUrls>[]>,
+    scrapeQueue.getJobs(ids, _logger) as Promise<NuQJob<ScrapeJobSingleUrls>[]>,
     process.env.USE_DB_AUTHENTICATION === "true"
       ? supabaseGetJobsById(ids)
       : [],
@@ -399,7 +408,7 @@ export async function crawlStatusController(
 
     for (let i = 0; i < Math.ceil(doneJobs.length / 50); i++) {
       const jobIds = doneJobs.slice(i * 50, (i + 1) * 50);
-      const jobs = await getJobs(jobIds);
+      const jobs = await getJobs(jobIds, logger);
 
       for (const job of jobs) {
         if (job.status === "failed") {
