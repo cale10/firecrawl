@@ -5,6 +5,9 @@ import { Engine } from "../scrapeURL/engines";
 import { scrapeURL } from "../scrapeURL";
 import { CostTracking } from "../../lib/cost-tracking";
 import { processSitemap } from "@mendable/firecrawl-rs";
+import { fetchFileToBuffer } from "../scrapeURL/engines/utils/downloadFile";
+import { gunzip } from "node:zlib";
+import { promisify } from "node:util";
 
 const useFireEngine =
   process.env.FIRE_ENGINE_BETA_URL !== "" &&
@@ -24,7 +27,21 @@ type SitemapData = {
   sitemaps: URL[];
 };
 
+const gunzipAsync = promisify(gunzip);
+
+async function _getSitemapXMLGZ(
+  options: SitemapScrapeOptions,
+): Promise<string> {
+  const { buffer } = await fetchFileToBuffer(options.url);
+  const decompressed = await gunzipAsync(buffer);
+  return decompressed.toString("utf-8");
+}
+
 async function getSitemapXML(options: SitemapScrapeOptions): Promise<string> {
+  if (options.url.toLowerCase().endsWith(".gz")) {
+    return await _getSitemapXMLGZ(options);
+  }
+
   const isLocationSpecified =
     options.location && options.location.country !== "us-generic";
 
